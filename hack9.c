@@ -220,15 +220,19 @@ threadmain(int argc, char *argv[])
 				threadexitsall(nil);
 				break;
 			case 'h':
+			case Kleft:
 				move(WEST);
 				break;
 			case 'j':
+			case Kdown:
 				move(SOUTH);
 				break;
 			case 'k':
+			case Kup:
 				move(NORTH);
 				break;
 			case 'l':
+			case Kright:
 				move(EAST);
 				break;
 			case '<':
