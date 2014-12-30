@@ -82,9 +82,9 @@ again3:
 		if(t->blocked || t->feat)
 			goto again3;
 
-		t->unit = nrand(320);
-		/* allows destroying of the creeps by player */
-		t->blocked = 0;
+		t->unit = TLARGECAT; //nrand(320);
+		t->monst = monst(TLARGECAT);
+		t->blocked = 1;
 
 		space--;
 	}
@@ -129,6 +129,16 @@ err0:
 void
 freelevel(Level *l)
 {
+	int x, y;
+	Tile *t;
+
+	for(x = 0; x < l->width; x++){
+		for(y = 0; y < l->height; y++){
+			t = tileat(l, Pt(x, y));
+			if(t->monst != nil)
+				free(t->monst);
+		}
+	}
 	free(l->tiles);
 	free(l);
 }

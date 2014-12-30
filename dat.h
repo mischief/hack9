@@ -19,23 +19,47 @@ void freetile(Tileset *t);
 /* draw i'th tile onto dst */
 void drawtile(Tileset *t, Image *dst, Point p, int i);
 
-/* well known tiles */
+typedef struct MonsterData MonsterData;
+struct MonsterData
+{
+	char *name;
+	uint maxhp;
+	uint atk;
+};
+
+extern MonsterData monstdata[392];
+
+typedef struct Monster Monster;
+struct Monster
+{
+	int hp;
+
+	/* doesn't need to be free'd */
+	MonsterData *md;
+};
+
+Monster *monst(int idx);
+
+/* well known tiles, also indexes into monstdata */
 enum
 {
+	/* monsters */
+	TLARGECAT	= 39,
+	TWIZARD		= 349,
+
+	/* features */
 	TWALL		= 840,
 	TTREE		= 847,
 	TFLOOR		= 848,
 	TUPSTAIR	= 851,
 	TDOWNSTAIR	= 852,
-
-	TWIZARD	= 349,
 };
 
 typedef struct Tile Tile;
 struct Tile
 {
-	/*
 	Monster *monst;
+	/*
 	Feature *feat;
 	Item *items[10];
 	Engraving *engrav;

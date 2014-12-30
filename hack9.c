@@ -139,7 +139,15 @@ move(int dir)
 	if(adj && *adj + c >= 0 && *adj + c < lim){
 		*adj += c;
 		t = tileat(level, dst);
-		if(!t->blocked){
+		if(t->blocked && t->monst != nil){
+			/* monster; attack it */
+			if(--t->monst->hp == 0){
+				free(t->monst);
+				t->monst = nil;
+				t->unit = 0;
+				t->blocked = 0;
+			}
+		} else if(!t->blocked){
 			tileat(level, pos)->unit = 0;
 			tileat(level, dst)->unit = TWIZARD;
 			pos = dst;

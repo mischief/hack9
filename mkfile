@@ -10,6 +10,8 @@ OFILES=\
 	tile.$O\
 	camera.$O\
 	level.$O\
+	monst.$O\
+	monstdata.$O\
 
 </sys/src/cmd/mkone
 
