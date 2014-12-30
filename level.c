@@ -11,11 +11,11 @@ clear(Level *l, Point p, int dist)
 	Rectangle r;
 	Tile *t;
 
-	r = Rect(p.x-dist, p.y-dist, p.x+dist, p.y+dist);
+	r = Rect(p.x-dist, p.y-dist, p.x+dist+1, p.y+dist+1);
 	rectclip(&r, Rect(0, 0, l->width, l->height));
 
-	for(x = r.min.x; x <= r.max.x; x++){
-		for(y = r.min.y; y <= r.max.y; y++){
+	for(x = r.min.x; x < r.max.x; x++){
+		for(y = r.min.y; y < r.max.y; y++){
 			p = (Point){x, y};
 			t = tileat(l, p);
 			if(t->feat != TUPSTAIR && t->feat != TDOWNSTAIR){
@@ -46,7 +46,7 @@ again1:
 		goto again1;
 	/* too close? */
 	p = subpt(pup, pdown);
-	if(sqrt(p.x*p.x+p.y*p.y) < 8.0)
+	if(sqrt(p.x*p.x+p.y*p.y) < 5.0)
 		goto again1;
 	t->feat = TDOWNSTAIR;
 	l->down = pdown;
@@ -106,6 +106,7 @@ void
 freelevel(Level *l)
 {
 	free(l->tiles);
+	free(l);
 }
 
 Tile*

@@ -117,12 +117,12 @@ move(int dir)
 		adj = &dst.x;
 		break;
 
-	/* special cases; use stairs */
+	/* special cases; use stairs, change level */
 	case UP:
 	case DOWN:
 		t = tileat(level, pos);
 		if(t->feat == (dir==UP ? TUPSTAIR : TDOWNSTAIR)){
-			free(level);
+			freelevel(level);
 			if((level = genlevel(nrand(10)+10, nrand(10)+10)) == nil)
 				sysfatal("genlevel: %r");
 
