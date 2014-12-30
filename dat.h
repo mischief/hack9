@@ -40,6 +40,9 @@ struct Tile
 	Item *items[10];
 	Engraving *engrav;
 	*/
+
+	/* does this block movement? */
+	int blocked;
 	
 	/* the unit on the tile */
 	int unit;
@@ -63,6 +66,9 @@ struct Level
 	int width;
 	int height;
 	Tile *tiles;
+
+	Point up;
+	Point down;
 };
 
 Level *genlevel(int width, int height);

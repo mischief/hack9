@@ -76,6 +76,77 @@ view(Point pos, Level *l, int scrwidth, int scrheight)
 	return r;
 }
 
+enum
+{
+	NORTH,
+	SOUTH,
+	EAST,
+	WEST,
+	UP,
+	DOWN,
+};
+
+void
+move(int dir)
+{
+	int *adj, c, lim;
+	Point dst;
+	Tile *t;
+
+	adj = nil;
+	c = lim = 0;
+	dst = pos;
+
+	switch(dir){
+	case NORTH:
+		c = -1;
+	if(0){
+	case SOUTH:
+		c = 1;
+	}
+		lim = level->height;
+		adj = &dst.y;
+		break;
+	case WEST:
+		c = -1;
+	if(0){
+	case EAST:
+		c = 1;
+	}
+		lim = level->width;
+		adj = &dst.x;
+		break;
+
+	/* special cases; use stairs */
+	case UP:
+	case DOWN:
+		t = tileat(level, pos);
+		if(t->feat == (dir==UP ? TUPSTAIR : TDOWNSTAIR)){
+			free(level);
+			if((level = genlevel(nrand(10)+10, nrand(10)+10)) == nil)
+				sysfatal("genlevel: %r");
+
+			if(dir == UP)
+				pos = level->down;
+			else
+				pos = level->up;
+
+			tileat(level, pos)->unit = TWIZARD;
+		}
+		break;
+	}
+
+	if(adj && *adj + c >= 0 && *adj + c < lim){
+		*adj += c;
+		t = tileat(level, dst);
+		if(!t->blocked){
+			tileat(level, pos)->unit = 0;
+			tileat(level, dst)->unit = TWIZARD;
+			pos = dst;
+		}
+	}
+}
+
 void
 threadmain(int argc, char *argv[])
 {
@@ -83,8 +154,8 @@ threadmain(int argc, char *argv[])
 	
 	/* of viewport, in size of tiles */
 	int width, height;
-	Point pt;
 	Rectangle r;
+	Tile *t;
 
 	ARGBEGIN{
 	}ARGEND
@@ -103,11 +174,12 @@ threadmain(int argc, char *argv[])
 	if((tiles = opentile("nethack.32x32", 32, 32)) == nil)
 		sysfatal("opentile: %r");
 
-	if((level = genlevel(10, 10)) == nil)
+	if((level = genlevel(nrand(10)+10, nrand(10)+10)) == nil)
 		sysfatal("genlevel: %r");
 
-	pos = Pt(0, 0);
-	tileat(level, pos)->unit = TWIZARD;
+	pos = level->up;
+	t = tileat(level, pos);
+	t->unit = TWIZARD;
 
 	width = Dx(screen->r) / tiles->width;
 	height = Dy(screen->r) / tiles->height;
@@ -148,32 +220,22 @@ threadmain(int argc, char *argv[])
 				threadexitsall(nil);
 				break;
 			case 'h':
-				if(pos.x-1 >= 0){
-					tileat(level, pos)->unit = 0;
-					pos.x -= 1;
-					tileat(level, pos)->unit = TWIZARD;
-				}
+				move(WEST);
 				break;
 			case 'j':
-				if(pos.y+1 < level->height){
-					tileat(level, pos)->unit = 0;
-					pos.y += 1;
-					tileat(level, pos)->unit = TWIZARD;
-				}
+				move(SOUTH);
 				break;
 			case 'k':
-				if(pos.y-1 >= 0){
-					tileat(level, pos)->unit = 0;
-					pos.y -= 1;
-					tileat(level, pos)->unit = TWIZARD;
-				}
+				move(NORTH);
 				break;
 			case 'l':
-				if(pos.x+1 < level->width){
-					tileat(level, pos)->unit = 0;
-					pos.x += 1;
-					tileat(level, pos)->unit = TWIZARD;
-				}
+				move(EAST);
+				break;
+			case '<':
+				move(UP);
+				break;
+			case '>':
+				move(DOWN);
 				break;
 			}
 
