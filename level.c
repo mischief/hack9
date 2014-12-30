@@ -8,6 +8,7 @@ static void
 clear(Level *l, Point p, int dist)
 {
 	int x, y;
+	Point p2;
 	Rectangle r;
 	Tile *t;
 
@@ -16,23 +17,25 @@ clear(Level *l, Point p, int dist)
 
 	for(x = r.min.x; x < r.max.x; x++){
 		for(y = r.min.y; y < r.max.y; y++){
-			p = (Point){x, y};
-			t = tileat(l, p);
-			if(t->feat != TUPSTAIR && t->feat != TDOWNSTAIR){
-				t->feat = 0;
-				t->blocked = 0;
-			}
+			p2 = (Point){x, y};
+			if(eqpt(p, p2))
+				continue;
+			t = tileat(l, p2);
+			t->unit = 0;
+			t->feat = 0;
+			t->blocked = 0;
 		}
 	}
-
 }
 
 static void
 gen(Level *l)
 {
-	int i, q;
+	int i, q, rnd, space;
 	Point pup, pdown, p;
 	Tile *t;
+
+	space = l->width*l->height;
 
 	pup = Pt(nrand(l->width), nrand(l->height));
 	tileat(l, pup)->feat = TUPSTAIR;
@@ -51,11 +54,14 @@ again1:
 	t->feat = TDOWNSTAIR;
 	l->down = pdown;
 
+	space -= 2;
+
 	/* place an arbitrary amount of trees */
-	q = (l->width*l->height) / 2;
+	q = (l->width*l->height) / 4;
 	if(q < 3)
 		q = 1;
-	for(i = 0; i <= nrand(q)+(q/2); i++){
+	rnd = nrand(q) + q/2;
+	for(i = 0; i <= rnd && space > 10; i++){
 again2:
 		t = tileat(l, Pt(nrand(l->width), nrand(l->height)));
 		if(t->blocked || t->feat)
@@ -63,6 +69,24 @@ again2:
 
 		t->feat = TTREE;
 		t->blocked = 1;
+
+		space--;
+	}
+
+	/* some monsters */
+	q = nrand(10)+10;
+	rnd = nrand(q) + q/2;
+	for(i = 0; i < rnd && space > 10; i++){
+again3:
+		t = tileat(l, Pt(nrand(l->width), nrand(l->height)));
+		if(t->blocked || t->feat)
+			goto again3;
+
+		t->unit = nrand(320);
+		/* allows destroying of the creeps by player */
+		t->blocked = 0;
+
+		space--;
 	}
 
 	/* clear space around stairs */
