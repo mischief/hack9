@@ -13,8 +13,11 @@ Keyboardctl *kc;
 Tileset *tiles;
 Level *level;
 
+/* in tiles */
+Point campos;
+
+/* of player */
 Point pos;
-Camera cam;
 
 static int
 min(int a, int b)
@@ -24,43 +27,64 @@ min(int a, int b)
 	return b;
 }
 
+/* draw the whole level on the screen using tileset ts.
+ * r.min is the upper left visible tile, and r.max is
+ * the bottom right visible tile.
+ * */
 static void
-drawlevel(Level *l, Tileset *ts, int width, int height)
+drawlevel(Level *l, Tileset *ts, Rectangle r)
 {
 	int x, y, what;
-	Point xy, tpos, cen;
+	Point xy, tpos;
 	Tile *t;
 
-	for(x = 0; x < width; x++){
-		for(y = 0; y < height; y++){
-			xy = (Point){x, y};
+	draw(screen, screen->r, display->black, nil, ZP);
 
-			/* very wrong. */
+	for(x = r.min.x; x < r.max.x; x++){
+		for(y = r.min.y; y < r.max.y; y++){
+			/* world cell */
+			xy = (Point){x, y};
+			/* screen space */
 			tpos = xy;
+			tpos = addpt(tpos, campos);
 			tpos.x *= ts->width;
 			tpos.y *= ts->height;
-			tpos = ctrans(&cam, tpos);
+			tpos = addpt(tpos, screen->r.min);
 			t = tileat(l, xy);
-			what = t->terrain;
-			if(t->unit)
-				what = t->unit;
-			else if(t->feat)
-				what = t->feat;
-			cen = addpt(screen->r.min, tpos);
-			//if(what == TWIZARD)
-			//	fprint(2, "draw %d at %P %P ", what, tpos, cen);
-			drawtile(ts, screen, cen, what);
+			if(t){
+				what = t->terrain;
+				if(t->unit)
+					what = t->unit;
+				else if(t->feat)
+					what = t->feat;
+				drawtile(ts, screen, tpos, what);
+			}
 		}
 	}
+}
+
+Rectangle
+view(Point pos, Level *l, int scrwidth, int scrheight)
+{
+	Point p;
+	Rectangle r;
+
+	/* compute vieweable area of the map */
+	p = Pt((scrwidth/2)+2, (scrheight/2)+2);
+	r = Rpt(subpt(pos, p), addpt(pos, p));
+	rectclip(&r, Rect(0, 0, l->width, l->height));
+	return r;
 }
 
 void
 threadmain(int argc, char *argv[])
 {
-	Rune r;
+	Rune c;
 	
 	/* of viewport, in size of tiles */
 	int width, height;
+	Point pt;
+	Rectangle r;
 
 	ARGBEGIN{
 	}ARGEND
@@ -87,16 +111,18 @@ threadmain(int argc, char *argv[])
 
 	width = Dx(screen->r) / tiles->width;
 	height = Dy(screen->r) / tiles->height;
-	cam = (Camera){ZP, Rect(0, 0, Dy(screen->r), Dx(screen->r)), Rect(0, 0, Dy(screen->r), Dx(screen->r))};
-	ccenter(&cam, Pt(pos.x * tiles->width, pos.y * tiles->height));
-	drawlevel(level, tiles, min(width+1, level->width), min(height+1, level->height));
+
+	r = view(pos, level, width, height);
+	campos = subpt(Pt(width/2, height/2), pos);
+
+	drawlevel(level, tiles, r);
 	flushimage(display, 1);
 
 	enum { AMOUSE, ARESIZE, AKEYBOARD, AEND };
 	Alt a[AEND+1] = {
 		{ mc->c,		nil,	CHANRCV },
 		{ mc->resizec,	nil,	CHANRCV },
-		{ kc->c,		&r,		CHANRCV },
+		{ kc->c,		&c,		CHANRCV },
 		{ nil,			nil,	CHANEND },
 	};
 
@@ -110,13 +136,14 @@ threadmain(int argc, char *argv[])
 			width = Dx(screen->r) / tiles->width;
 			height = Dy(screen->r) / tiles->height;
 
-			cam = (Camera){ZP, Rect(0, 0, Dy(screen->r), Dx(screen->r)), Rect(0, 0, Dy(screen->r), Dx(screen->r))};
-			ccenter(&cam, Pt(pos.x * tiles->width, pos.y * tiles->height));
-			drawlevel(level, tiles, min(width+1, level->width), min(height+1, level->height));
+			r = view(pos, level, width, height);
+			campos = subpt(Pt(width/2, height/2), pos);
+
+			drawlevel(level, tiles, r);
 			flushimage(display, 1);
 			break;
 		case AKEYBOARD:
-			switch(r){
+			switch(c){
 			case Kdel:
 				threadexitsall(nil);
 				break;
@@ -149,8 +176,10 @@ threadmain(int argc, char *argv[])
 				}
 				break;
 			}
-			ccenter(&cam, pos);
-			drawlevel(level, tiles, min(width+1, level->width), min(height+1, level->height));
+
+			r = view(pos, level, width, height);
+			campos = subpt(Pt(width/2, height/2), pos);
+			drawlevel(level, tiles, r);
 			flushimage(display, 1);
 			break;
 		}
