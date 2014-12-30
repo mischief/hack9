@@ -49,7 +49,7 @@ again1:
 		goto again1;
 	/* too close? */
 	p = subpt(pup, pdown);
-	if(sqrt(p.x*p.x+p.y*p.y) < 5.0)
+	if(sqrt(p.x*p.x+p.y*p.y) < 8.0)
 		goto again1;
 	t->feat = TDOWNSTAIR;
 	l->down = pdown;
@@ -62,10 +62,9 @@ again1:
 		q = 1;
 	rnd = nrand(q) + q/2;
 	for(i = 0; i <= rnd && space > 10; i++){
-again2:
-		t = tileat(l, Pt(nrand(l->width), nrand(l->height)));
-		if(t->blocked || t->feat)
-			goto again2;
+		do {
+			t = tileat(l, Pt(nrand(l->width), nrand(l->height)));
+		} while(t->blocked || t->feat);
 
 		t->feat = TTREE;
 		t->blocked = 1;
@@ -77,10 +76,9 @@ again2:
 	q = nrand(10)+10;
 	rnd = nrand(q) + q/2;
 	for(i = 0; i < rnd && space > 10; i++){
-again3:
-		t = tileat(l, Pt(nrand(l->width), nrand(l->height)));
-		if(t->blocked || t->feat)
-			goto again3;
+		do {
+			t = tileat(l, Pt(nrand(l->width), nrand(l->height)));
+		} while(t->blocked || t->feat);
 
 		t->unit = TLARGECAT; //nrand(320);
 		t->monst = monst(TLARGECAT);

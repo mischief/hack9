@@ -89,7 +89,7 @@ enum
 void
 move(int dir)
 {
-	int *adj, c, lim;
+	int *adj, c, lim, what;
 	Point dst;
 	Tile *t;
 
@@ -121,6 +121,7 @@ move(int dir)
 	case UP:
 	case DOWN:
 		t = tileat(level, pos);
+		what = t->unit;
 		if(t->feat == (dir==UP ? TUPSTAIR : TDOWNSTAIR)){
 			freelevel(level);
 			if((level = genlevel(nrand(10)+10, nrand(10)+10)) == nil)
@@ -131,7 +132,7 @@ move(int dir)
 			else
 				pos = level->up;
 
-			tileat(level, pos)->unit = TWIZARD;
+			tileat(level, pos)->unit = what;
 		}
 		break;
 	}
@@ -148,8 +149,11 @@ move(int dir)
 				t->blocked = 0;
 			}
 		} else if(!t->blocked){
-			tileat(level, pos)->unit = 0;
-			tileat(level, dst)->unit = TWIZARD;
+			/* move */
+			t = tileat(level, pos);
+			what = t->unit;
+			t->unit = 0;
+			tileat(level, dst)->unit = what;
 			pos = dst;
 		}
 	}
@@ -185,6 +189,7 @@ threadmain(int argc, char *argv[])
 	if((level = genlevel(nrand(10)+10, nrand(10)+10)) == nil)
 		sysfatal("genlevel: %r");
 
+	/* the player */
 	pos = level->up;
 	t = tileat(level, pos);
 	t->unit = TWIZARD;
