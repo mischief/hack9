@@ -100,6 +100,7 @@ struct Level
 	Tile *tiles;
 	int *flags;
 
+	Rectangle r;
 	Point up;
 	Point down;
 };
@@ -125,6 +126,12 @@ struct Camera
 void ccenter(Camera *c, Point p);
 Point ctrans(Camera *c, Point p);
 
+enum {
+	/* cost to move N S E W */
+	ORTHOCOST	= 10,
+};
+
 /* path.c */
+int manhattan(Point cur, Point targ);
 int pathfind(Level *l, Point start, Point end, Point **path);
 

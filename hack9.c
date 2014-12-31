@@ -196,7 +196,7 @@ movemons(void)
 
 	for(p.x = 0; p.x < level->width; p.x++){
 		for(p.y = 0; p.y < level->height; p.y++){
-			if(!eqpt(p, pos) && hasflagat(level, p, Fhasmonster)){
+			if(!eqpt(p, pos) && manhattan(p, pos) < 6 * ORTHOCOST && hasflagat(level, p, Fhasmonster)){
 				/* move the monster toward player */
 				npath = pathfind(level, p, pos, &path);
 				if(npath >= 0){
@@ -320,11 +320,9 @@ threadmain(int argc, char *argv[])
 
 			if(movdir != DUMMY){
 				p=move(pos, movdir);
-				if(eqpt(p, ZP)){
-					break;
+				if(!eqpt(p, ZP)){
+					pos = subpt(pos, p);
 				}
-
-				pos = subpt(pos, p);
 			}
 
 			static int turns=0;

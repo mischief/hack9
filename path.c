@@ -5,11 +5,7 @@
 #include "dat.h"
 #include "alg.h"
 
-enum {
-	/* cost to move N S E W */
-	ORTHOCOST	= 10,
-};
-
+/* manhattan distance */
 int
 manhattan(Point cur, Point targ)
 {
