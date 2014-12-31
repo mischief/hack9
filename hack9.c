@@ -160,7 +160,7 @@ move(Point src, int dir)
 	if(adj && *adj + c >= 0 && *adj + c < lim){
 		*adj += c;
 		t = tileat(level, dst);
-		if(hasflagat(level, dst, Fblocked) && t->monst != nil){
+		if(eqpt(src, pos) && hasflagat(level, dst, Fblocked) && t->monst != nil){
 			/* monster; attack it */
 			if(--t->monst->hp == 0){
 				free(t->monst);
@@ -196,16 +196,21 @@ movemons(void)
 
 	for(p.x = 0; p.x < level->width; p.x++){
 		for(p.y = 0; p.y < level->height; p.y++){
-			if(!eqpt(p, pos) && manhattan(p, pos) < 6 * ORTHOCOST && hasflagat(level, p, Fhasmonster)){
-				/* move the monster toward player */
-				npath = pathfind(level, p, pos, &path);
-				if(npath >= 0){
-					/* step once along path, path[0] is cur pos */
-					p2 = subpt(p, path[1]);
-					double ang = atan2(p2.y, p2.x);
-					movdir = (int)(4 * ang / (2*PI) + 4.5) % 4;
-					p2 = move(p, movdir+1);
-					free(path);
+			if(!eqpt(p, pos) && hasflagat(level, p, Fhasmonster)){
+				if(manhattan(p, pos) < 6 * ORTHOCOST){
+					/* move the monster toward player */
+					npath = pathfind(level, p, pos, &path);
+					if(npath >= 0){
+						/* step once along path, path[0] is cur pos */
+						p2 = subpt(p, path[1]);
+						double ang = atan2(p2.y, p2.x);
+						movdir = (int)(4 * ang / (2*PI) + 4.5) % 4;
+						p2 = move(p, movdir+1);
+						free(path);
+					}
+				} else {
+					/* random move */
+					move(p, nrand(4)+1);
 				}
 			}
 		}
