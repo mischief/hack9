@@ -108,6 +108,7 @@ move(Point src, int dir)
 
 	switch(dir){
 	default:
+		fprint(2, "unknown move %d\n", dir);
 	case DUMMY:
 		return ZP;
 		break;
@@ -202,7 +203,15 @@ movemons(void)
 				double ang = atan2(p2.y, p2.x);
 				movdir = (int)(4 * ang / (2*PI) + 4.5) % 4;
 				/* no pos to update. */
-				move(p, movdir+1);
+				if(eqpt(move(p, movdir+1), ZP)){
+					/* try again? */
+					movdir = (movdir+1) % 4;
+					if(eqpt(move(p, movdir+1), ZP)){
+						/* try again? */
+						movdir = (movdir+2) % 4;
+						move(p, movdir+1);
+					}
+				}
 			}
 		}
 	}
@@ -279,7 +288,7 @@ threadmain(int argc, char *argv[])
 			flushimage(display, 1);
 			break;
 		case AKEYBOARD:
-			movdir = 0;
+			movdir = DUMMY;
 			switch(c){
 			case Kdel:
 				threadexitsall(nil);
@@ -309,15 +318,22 @@ threadmain(int argc, char *argv[])
 			case '.':
 				movdir = DUMMY;
 				break;
+			default:
+				/* don't waste a move */
+				continue;
 			}
 
-			p=move(pos, movdir);
-			if(!eqpt(p, ZP)){
+			if(movdir != DUMMY){
+				p=move(pos, movdir);
+				if(eqpt(p, ZP)){
+					break;
+				}
+
 				pos = subpt(pos, p);
 			}
 
 			static int turns=0;
-			if(++turns % 5 ==0){
+			if(++turns % 3 ==0){
 				movemons();
 			}
 
