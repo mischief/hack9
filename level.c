@@ -41,18 +41,20 @@ gen(Level *l)
 	tileat(l, pup)->feat = TUPSTAIR;
 	l->up = pup;
 
-again1:
-	pdown = Pt(nrand(l->width), nrand(l->height));
-	t = tileat(l, pdown);
-	/* already upstair? */
-	if(t->feat)
-		goto again1;
-	/* too close? */
-	p = subpt(pup, pdown);
-	if(sqrt(p.x*p.x+p.y*p.y) < 8.0)
-		goto again1;
-	t->feat = TDOWNSTAIR;
-	l->down = pdown;
+	while(1){
+		pdown = Pt(nrand(l->width), nrand(l->height));
+		t = tileat(l, pdown);
+		/* already upstair? */
+		if(t->feat)
+			continue;
+		/* too close? */
+		p = subpt(pup, pdown);
+		if(sqrt(p.x*p.x+p.y*p.y) < 8.0)
+			continue;
+		t->feat = TDOWNSTAIR;
+		l->down = pdown;
+		break;
+	}
 
 	space -= 2;
 
