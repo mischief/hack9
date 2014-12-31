@@ -78,26 +78,32 @@ view(Point pos, Level *l, int scrwidth, int scrheight)
 
 enum
 {
-	NORTH,
-	SOUTH,
-	EAST,
+	DUMMY,
 	WEST,
+	NORTH,
+	EAST,
+	SOUTH,
 	UP,
 	DOWN,
 };
 
-void
-move(int dir)
+/* attempt to move the monster/player at src in dir direction
+ * return new Point if moved, ZP if not */
+static Point
+move(Point src, int dir)
 {
 	int *adj, c, lim, what;
 	Point dst;
-	Tile *t;
+	Tile *t, *t2;
+	Monster *m;
 
 	adj = nil;
 	c = lim = 0;
-	dst = pos;
+	dst = src;
 
 	switch(dir){
+	default:
+		return ZP;
 	case NORTH:
 		c = -1;
 	if(0){
@@ -120,19 +126,24 @@ move(int dir)
 	/* special cases; use stairs, change level */
 	case UP:
 	case DOWN:
-		t = tileat(level, pos);
+		t = tileat(level, src);
 		what = t->unit;
 		if(t->feat == (dir==UP ? TUPSTAIR : TDOWNSTAIR)){
+			m = t->monst;
+			t->monst = nil;
 			freelevel(level);
 			if((level = genlevel(nrand(10)+10, nrand(10)+10)) == nil)
 				sysfatal("genlevel: %r");
 
 			if(dir == UP)
-				pos = level->down;
+				dst = level->down;
 			else
-				pos = level->up;
+				dst = level->up;
 
-			tileat(level, pos)->unit = what;
+			t = tileat(level, dst);
+			t->unit = what;
+			t->monst = m;
+			return dst;
 		}
 		break;
 	}
@@ -148,13 +159,48 @@ move(int dir)
 				t->unit = 0;
 				t->blocked = 0;
 			}
-		} else if(!t->blocked){
+
+			/* hit is ok, something 'happened' */
+			return src;
+		}
+		if(!t->blocked){
 			/* move */
-			t = tileat(level, pos);
-			what = t->unit;
-			t->unit = 0;
-			tileat(level, dst)->unit = what;
-			pos = dst;
+			t2 = tileat(level, src);
+			t->unit = t2->unit;
+			t2->unit = 0;
+			t->monst = t2->monst;
+			t2->monst = nil;
+			t->blocked = 1;
+			t2->blocked = 0;
+			return dst;
+		}
+	}
+
+	return ZP;
+}
+
+void
+movemons(void)
+{
+	int x, y, movdir;
+	Point p, p2;
+	Tile *t;
+	Monster *m;
+
+	for(x = 0; x < level->width; x++){
+		for(y = 0; y < level->height; y++){
+			p = (Point){x, y};
+			t = tileat(level, p);
+			m = t->monst;
+
+			if(m != nil){
+				/* move the monster toward player */
+				p2 = subpt(p, pos);
+				double ang = atan2(p2.y, p2.x);
+				movdir = (int)(4 * ang / (2*PI) + 4.5) % 4;
+				/* no pos to update. */
+				move(p, movdir+1);
+			}
 		}
 	}
 }
@@ -165,8 +211,9 @@ threadmain(int argc, char *argv[])
 	Rune c;
 	
 	/* of viewport, in size of tiles */
-	int width, height;
+	int width, height, movdir;
 	Rectangle r;
+	Point p;
 	Tile *t;
 
 	ARGBEGIN{
@@ -228,32 +275,46 @@ threadmain(int argc, char *argv[])
 			flushimage(display, 1);
 			break;
 		case AKEYBOARD:
+			movdir = 0;
 			switch(c){
 			case Kdel:
 				threadexitsall(nil);
 				break;
 			case 'h':
 			case Kleft:
-				move(WEST);
+				movdir = WEST;
 				break;
 			case 'j':
 			case Kdown:
-				move(SOUTH);
+				movdir = SOUTH;
 				break;
 			case 'k':
 			case Kup:
-				move(NORTH);
+				movdir = NORTH;
 				break;
 			case 'l':
 			case Kright:
-				move(EAST);
+				movdir = EAST;
 				break;
 			case '<':
-				move(UP);
+				movdir = UP;
 				break;
 			case '>':
-				move(DOWN);
+				movdir = DOWN;
 				break;
+			case '.':
+				movdir = DUMMY;
+				break;
+			}
+
+			p=move(pos, movdir);
+			if(!eqpt(p, ZP)){
+				pos = p;
+			}
+
+			static int turns=0;
+			if(++turns % 5 ==0){
+				movemons();
 			}
 
 			r = view(pos, level, width, height);

@@ -59,7 +59,7 @@ gen(Level *l)
 	space -= 2;
 
 	/* place an arbitrary amount of trees */
-	q = (l->width*l->height) / 4;
+	q = (l->width*l->height) / 8;
 	if(q < 3)
 		q = 1;
 	rnd = nrand(q) + q/2;
@@ -75,8 +75,7 @@ gen(Level *l)
 	}
 
 	/* some monsters */
-	q = nrand(10)+10;
-	rnd = nrand(q) + q/2;
+	rnd = nrand(10)+10;
 	for(i = 0; i < rnd && space > 10; i++){
 		do {
 			t = tileat(l, Pt(nrand(l->width), nrand(l->height)));
