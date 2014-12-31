@@ -191,26 +191,21 @@ move(Point src, int dir)
 void
 movemons(void)
 {
-	int x, y, movdir;
-	Point p, p2;
+	int movdir, npath;
+	Point p, p2, *path;
 
-	for(x = 0; x < level->width; x++){
-		for(y = 0; y < level->height; y++){
-			p = (Point){x, y};
+	for(p.x = 0; p.x < level->width; p.x++){
+		for(p.y = 0; p.y < level->height; p.y++){
 			if(!eqpt(p, pos) && hasflagat(level, p, Fhasmonster)){
 				/* move the monster toward player */
-				p2 = subpt(p, pos);
-				double ang = atan2(p2.y, p2.x);
-				movdir = (int)(4 * ang / (2*PI) + 4.5) % 4;
-				/* no pos to update. */
-				if(eqpt(move(p, movdir+1), ZP)){
-					/* try again? */
-					movdir = (movdir+1) % 4;
-					if(eqpt(move(p, movdir+1), ZP)){
-						/* try again? */
-						movdir = (movdir+2) % 4;
-						move(p, movdir+1);
-					}
+				npath = pathfind(level, p, pos, &path);
+				if(npath >= 0){
+					/* step once along path, path[0] is cur pos */
+					p2 = subpt(p, path[1]);
+					double ang = atan2(p2.y, p2.x);
+					movdir = (int)(4 * ang / (2*PI) + 4.5) % 4;
+					p2 = move(p, movdir+1);
+					free(path);
 				}
 			}
 		}

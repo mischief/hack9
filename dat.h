@@ -107,11 +107,11 @@ struct Level
 Level *genlevel(int width, int height);
 void freelevel(Level *l);
 Tile *tileat(Level *l, Point p);
-//#define tileat(l, p) (l->tiles+(p.y*l->width)+p.x)
 #define flagat(l, p) (*(l->flags+(p.y*l->width)+p.x))
 #define hasflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) & (F))
 #define setflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) |= (F))
 #define clrflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) &= ~(F))
+Point *lneighbor(Level *l, Point p, int *n);
 
 typedef struct Camera Camera;
 struct Camera
@@ -121,6 +121,10 @@ struct Camera
 	Rectangle box;
 };
 
+/* camera.c */
 void ccenter(Camera *c, Point p);
 Point ctrans(Camera *c, Point p);
+
+/* path.c */
+int pathfind(Level *l, Point start, Point end, Point **path);
 

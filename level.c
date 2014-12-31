@@ -34,7 +34,7 @@ gen(Level *l)
 
 	space = l->width*l->height;
 
-	pup = Pt(nrand(l->width), nrand(l->height));
+	pup = (Point){nrand(l->width), nrand(l->height)};
 	tileat(l, pup)->feat = TUPSTAIR;
 	setflagat(l, pup, Fhasfeature);
 	l->up = pup;
@@ -42,13 +42,13 @@ gen(Level *l)
 	space--;
 
 	while(1){
-		pdown = Pt(nrand(l->width), nrand(l->height));
+		pdown = (Point){nrand(l->width), nrand(l->height)};
 		/* already upstair? */
 		if(flagat(l, pdown) & Fhasfeature)
 			continue;
 		/* too close? */
 		p = subpt(pup, pdown);
-		if(sqrt(p.x*p.x+p.y*p.y) < 5.0)
+		if(sqrt(p.x*p.x+p.y*p.y) < (l->width < l->height ? l->width-1 : l->height-1))
 			continue;
 		setflagat(l, pdown, Fhasfeature);
 		tileat(l, pdown)->feat = TDOWNSTAIR;
@@ -65,7 +65,7 @@ gen(Level *l)
 	rnd = nrand(q)+q;
 	for(i = 0; i <= rnd && space > 10; i++){
 		do {
-			p = Pt(nrand(l->width), nrand(l->height));
+			p = (Point){nrand(l->width), nrand(l->height)};
 		} while(hasflagat(l, p, Fblocked|Fhasfeature));
 
 		t = tileat(l, p);
@@ -79,7 +79,7 @@ gen(Level *l)
 	rnd = nrand(q)+q;
 	for(i = 0; i < rnd && space > 10; i++){
 		do {
-			p = Pt(nrand(l->width), nrand(l->height));
+			p = (Point){nrand(l->width), nrand(l->height)};
 		} while(hasflagat(l, p, Fblocked|Fhasfeature));
 
 		t = tileat(l, p);
@@ -156,5 +156,28 @@ Tile*
 tileat(Level *l, Point p)
 {
 	return l->tiles+(p.y*l->width)+p.x;
+}
+
+/* von neumann neighborhood */
+Point*
+lneighbor(Level *l, Point p, int *n)
+{
+	int i, count;
+	Point *neigh, p2, diff[] = { {1, 0}, {0, -1}, {-1, 0}, {0, 1} };
+	Rectangle level;
+
+	count = 0;
+	level = Rect(0, 0, l->width, l->height);
+	neigh = mallocz(sizeof(Point) * nelem(diff), 1);
+
+	for(i = 0; i < nelem(diff); i++){
+		p2 = addpt(p, diff[i]);
+		if(ptinrect(p2, level) && (!hasflagat(l, p2, Fblocked) || hasflagat(l, p2, Fhasmonster))){
+			neigh[count++] = p2;
+		}
+	}
+
+	*n = count;
+	return neigh;
 }
 
