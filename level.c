@@ -7,23 +7,20 @@
 static void
 clear(Level *l, Point p, int dist)
 {
-	int x, y;
-	Point p2;
 	Rectangle r;
+	Point p2;
 	Tile *t;
 
 	r = Rect(p.x-dist, p.y-dist, p.x+dist+1, p.y+dist+1);
 	rectclip(&r, Rect(0, 0, l->width, l->height));
 
-	for(x = r.min.x; x < r.max.x; x++){
-		for(y = r.min.y; y < r.max.y; y++){
-			p2 = (Point){x, y};
+	for(p2.x = r.min.x; p2.x < r.max.x; p2.x++){
+		for(p2.y = r.min.y; p2.y < r.max.y; p2.y++){
 			if(eqpt(p, p2))
 				continue;
 			t = tileat(l, p2);
-			t->unit = 0;
-			t->feat = 0;
-			t->blocked = 0;
+			t->unit = t->feat = 0;
+			flagat(l, p2) = 0;
 		}
 	}
 }
@@ -39,51 +36,57 @@ gen(Level *l)
 
 	pup = Pt(nrand(l->width), nrand(l->height));
 	tileat(l, pup)->feat = TUPSTAIR;
+	setflagat(l, pup, Fhasfeature);
 	l->up = pup;
+
+	space--;
 
 	while(1){
 		pdown = Pt(nrand(l->width), nrand(l->height));
-		t = tileat(l, pdown);
 		/* already upstair? */
-		if(t->feat)
+		if(flagat(l, pdown) & Fhasfeature)
 			continue;
 		/* too close? */
 		p = subpt(pup, pdown);
 		if(sqrt(p.x*p.x+p.y*p.y) < 8.0)
 			continue;
-		t->feat = TDOWNSTAIR;
+		setflagat(l, pdown, Fhasfeature);
+		tileat(l, pdown)->feat = TDOWNSTAIR;
 		l->down = pdown;
 		break;
 	}
 
-	space -= 2;
+	space--;
 
 	/* place an arbitrary amount of trees */
-	q = (l->width*l->height) / 8;
+	q = (l->width*l->height) / 10;
 	if(q < 3)
 		q = 1;
-	rnd = nrand(q) + q/2;
+	rnd = nrand(q)+q;
 	for(i = 0; i <= rnd && space > 10; i++){
 		do {
-			t = tileat(l, Pt(nrand(l->width), nrand(l->height)));
-		} while(t->blocked || t->feat);
+			p = Pt(nrand(l->width), nrand(l->height));
+		} while(hasflagat(l, p, Fblocked|Fhasfeature));
 
+		t = tileat(l, p);
 		t->feat = TTREE;
-		t->blocked = 1;
+		flagat(l, p) = (Fblocked|Fhasfeature);
 
 		space--;
 	}
 
 	/* some monsters */
-	rnd = nrand(10)+10;
+	rnd = nrand(q)+q;
 	for(i = 0; i < rnd && space > 10; i++){
 		do {
-			t = tileat(l, Pt(nrand(l->width), nrand(l->height)));
-		} while(t->blocked || t->feat);
+			p = Pt(nrand(l->width), nrand(l->height));
+		} while(hasflagat(l, p, Fblocked|Fhasfeature));
 
-		t->unit = TLARGECAT; //nrand(320);
-		t->monst = monst(TLARGECAT);
-		t->blocked = 1;
+		t = tileat(l, p);
+		q = nrand(4)+TSOLDIER;
+		t->unit = q; //nrand(320);
+		t->monst = monst(q);
+		setflagat(l, p, Fblocked|Fhasmonster);
 
 		space--;
 	}
@@ -110,6 +113,10 @@ genlevel(int width, int height)
 	if(l->tiles == nil)
 		goto err0;
 
+	l->flags = mallocz(sizeof(int) * width * height, 1);
+	if(l->flags == nil)
+		goto err1;
+
 	for(x = 0; x < width; x++){
 		for(y = 0; y < height; y++){
 			tileat(l, Pt(x, y))->terrain = TFLOOR;
@@ -120,6 +127,8 @@ genlevel(int width, int height)
 
 	return l;
 
+err1:
+	free(l->tiles);
 err0:
 	free(l);
 	return nil;
@@ -129,15 +138,16 @@ void
 freelevel(Level *l)
 {
 	int x, y;
-	Tile *t;
+	Point p;
 
 	for(x = 0; x < l->width; x++){
 		for(y = 0; y < l->height; y++){
-			t = tileat(l, Pt(x, y));
-			if(t->monst != nil)
-				free(t->monst);
+			p = (Point){x, y};
+			if(hasflagat(l, p, Fhasmonster))
+				free(tileat(l, Pt(x, y))->monst);
 		}
 	}
+
 	free(l->tiles);
 	free(l);
 }

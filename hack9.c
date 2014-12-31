@@ -7,6 +7,11 @@
 
 #include "dat.h"
 
+enum
+{
+	LSIZE	= 10,
+};
+
 Mousectl *mc;
 Keyboardctl *kc;
 
@@ -103,7 +108,9 @@ move(Point src, int dir)
 
 	switch(dir){
 	default:
+	case DUMMY:
 		return ZP;
+		break;
 	case NORTH:
 		c = -1;
 	if(0){
@@ -132,7 +139,7 @@ move(Point src, int dir)
 			m = t->monst;
 			t->monst = nil;
 			freelevel(level);
-			if((level = genlevel(nrand(10)+10, nrand(10)+10)) == nil)
+			if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE)) == nil)
 				sysfatal("genlevel: %r");
 
 			if(dir == UP)
@@ -143,6 +150,7 @@ move(Point src, int dir)
 			t = tileat(level, dst);
 			t->unit = what;
 			t->monst = m;
+			setflagat(level, dst, Fhasmonster|Fblocked);
 			return dst;
 		}
 		break;
@@ -151,27 +159,27 @@ move(Point src, int dir)
 	if(adj && *adj + c >= 0 && *adj + c < lim){
 		*adj += c;
 		t = tileat(level, dst);
-		if(t->blocked && t->monst != nil){
+		if(hasflagat(level, dst, Fblocked) && t->monst != nil){
 			/* monster; attack it */
 			if(--t->monst->hp == 0){
 				free(t->monst);
 				t->monst = nil;
 				t->unit = 0;
-				t->blocked = 0;
+				clrflagat(level, dst, Fhasmonster|Fblocked);
 			}
 
 			/* hit is ok, something 'happened' */
 			return src;
 		}
-		if(!t->blocked){
+		if(!hasflagat(level, dst, Fblocked)){
 			/* move */
 			t2 = tileat(level, src);
+			setflagat(level, dst, (Fhasmonster|Fblocked));
+			clrflagat(level, src, (Fhasmonster|Fblocked));
 			t->unit = t2->unit;
 			t2->unit = 0;
 			t->monst = t2->monst;
 			t2->monst = nil;
-			t->blocked = 1;
-			t2->blocked = 0;
 			return dst;
 		}
 	}
@@ -184,16 +192,11 @@ movemons(void)
 {
 	int x, y, movdir;
 	Point p, p2;
-	Tile *t;
-	Monster *m;
 
 	for(x = 0; x < level->width; x++){
 		for(y = 0; y < level->height; y++){
 			p = (Point){x, y};
-			t = tileat(level, p);
-			m = t->monst;
-
-			if(m != nil){
+			if(!eqpt(p, pos) && hasflagat(level, p, Fhasmonster)){
 				/* move the monster toward player */
 				p2 = subpt(p, pos);
 				double ang = atan2(p2.y, p2.x);
@@ -233,13 +236,14 @@ threadmain(int argc, char *argv[])
 	if((tiles = opentile("nethack.32x32", 32, 32)) == nil)
 		sysfatal("opentile: %r");
 
-	if((level = genlevel(nrand(10)+10, nrand(10)+10)) == nil)
+	if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE)) == nil)
 		sysfatal("genlevel: %r");
 
 	/* the player */
 	pos = level->up;
 	t = tileat(level, pos);
 	t->unit = TWIZARD;
+	setflagat(level, pos, Fhasmonster|Fblocked);
 
 	width = Dx(screen->r) / tiles->width;
 	height = Dy(screen->r) / tiles->height;

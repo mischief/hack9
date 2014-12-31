@@ -45,8 +45,12 @@ enum
 {
 	/* monsters */
 	TLARGECAT	= 39,
+	TGWIZARD	= 168,
+	TSOLDIER	= 280,
+	TSERGEANT	= 281,
+	TLIEUTENANT	= 282,
+	TCAPTAIN	= 283,
 	TWIZARD		= 349,
-
 	/* features */
 	TWALL		= 840,
 	TTREE		= 847,
@@ -58,6 +62,7 @@ enum
 typedef struct Tile Tile;
 struct Tile
 {
+	/* current monster occupying tile */
 	Monster *monst;
 	/*
 	Feature *feat;
@@ -65,9 +70,6 @@ struct Tile
 	Engraving *engrav;
 	*/
 
-	/* does this block movement? */
-	int blocked;
-	
 	/* the unit on the tile */
 	int unit;
 
@@ -76,12 +78,18 @@ struct Tile
 
 	/* index into tileset */
 	int terrain;
+
+	int flags;
 };
 
 enum
 {
-	LWIDTH	= 200,
-	LHEIGHT	= 100,
+	/* tile flags */
+	Fhasobject	= 0x1,
+	Fhasmonster	= 0x2,
+	Fhasitem	= 0x4,
+	Fhasfeature	= 0x8,
+	Fblocked	= 0x10,
 };
 
 typedef struct Level Level;
@@ -90,6 +98,7 @@ struct Level
 	int width;
 	int height;
 	Tile *tiles;
+	int *flags;
 
 	Point up;
 	Point down;
@@ -98,6 +107,11 @@ struct Level
 Level *genlevel(int width, int height);
 void freelevel(Level *l);
 Tile *tileat(Level *l, Point p);
+//#define tileat(l, p) (l->tiles+(p.y*l->width)+p.x)
+#define flagat(l, p) (*(l->flags+(p.y*l->width)+p.x))
+#define hasflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) & (F))
+#define setflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) |= (F))
+#define clrflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) &= ~(F))
 
 typedef struct Camera Camera;
 struct Camera
