@@ -48,7 +48,7 @@ gen(Level *l)
 			continue;
 		/* too close? */
 		p = subpt(pup, pdown);
-		if(sqrt(p.x*p.x+p.y*p.y) < 8.0)
+		if(sqrt(p.x*p.x+p.y*p.y) < 5.0)
 			continue;
 		setflagat(l, pdown, Fhasfeature);
 		tileat(l, pdown)->feat = TDOWNSTAIR;

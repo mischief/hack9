@@ -93,7 +93,7 @@ enum
 };
 
 /* attempt to move the monster/player at src in dir direction
- * return new Point if moved, ZP if not */
+ * return delta in Point if moved, ZP if not */
 static Point
 move(Point src, int dir)
 {
@@ -151,7 +151,7 @@ move(Point src, int dir)
 			t->unit = what;
 			t->monst = m;
 			setflagat(level, dst, Fhasmonster|Fblocked);
-			return dst;
+			return subpt(src, dst);
 		}
 		break;
 	}
@@ -168,8 +168,8 @@ move(Point src, int dir)
 				clrflagat(level, dst, Fhasmonster|Fblocked);
 			}
 
-			/* hit is ok, something 'happened' */
-			return src;
+			/* no movement */
+			return ZP;
 		}
 		if(!hasflagat(level, dst, Fblocked)){
 			/* move */
@@ -180,7 +180,7 @@ move(Point src, int dir)
 			t2->unit = 0;
 			t->monst = t2->monst;
 			t2->monst = nil;
-			return dst;
+			return subpt(src, dst);
 		}
 	}
 
@@ -313,7 +313,7 @@ threadmain(int argc, char *argv[])
 
 			p=move(pos, movdir);
 			if(!eqpt(p, ZP)){
-				pos = p;
+				pos = subpt(pos, p);
 			}
 
 			static int turns=0;
