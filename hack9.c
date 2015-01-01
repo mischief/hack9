@@ -359,8 +359,6 @@ threadmain(int argc, char *argv[])
 		{ nil,				nil,	CHANEND },
 	};
 
-	static int turns=0;
-
 	for(;;){
 		switch(alt(a)){
 		case AMOUSE:
@@ -379,9 +377,9 @@ threadmain(int argc, char *argv[])
 			move = MNONE;
 			dir = NODIR;
 
-			if(turns % 5 == 0 && player->hp < player->md->maxhp){
+			if(turn % 5 == 0 && player->hp < player->md->maxhp){
 				good("you get 1 hp.");
-				ainc(&player->hp);
+				player->hp++;
 			}
 
 			switch(c){
@@ -426,12 +424,10 @@ threadmain(int argc, char *argv[])
 					msg("ouch!");
 			}
 
-			turns++;
-			if(turns % 2 ==0){
+			turn++;
+			if(turn % 2 ==0){
 				movemons();
 			}
-
-			ainc(&turn);
 
 			if(player->hp < 2){
 				gameover++;
