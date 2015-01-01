@@ -28,16 +28,23 @@ clear(Level *l, Point p, int dist)
 static void
 drunk1(Level *l, Point p, int n)
 {
+	int cur, last;
 	Point next, dir[] = { Pt(1, 0), Pt(-1, 0), Pt(0, 1), Pt(0, -1) };
 	Rectangle clipr;
 	Tile *t;
 
 	clipr = insetrect(l->r, 1);
 
+	last = 0;
 	while(n > 0){
-		next = addpt(p, dir[nrand(nelem(dir))]);
+		if(nrand(3) == 0)
+			cur = nrand(nelem(dir));
+		else
+			cur = last;
+		next = addpt(p, dir[cur]);
 		if(!ptinrect(next, clipr))
 			continue;
+		last = cur;
 		p = next;
 		if(!eqpt(p, l->up) && !eqpt(p, l->down) && hasflagat(l, p, Fblocked|Fhasfeature)){
 			t = tileat(l, p);
@@ -91,7 +98,7 @@ gen(Level *l)
 
 	space = l->width*l->height;
 
-	pup = (Point){nrand(l->width-2)+1, nrand(l->height-2)+1};
+	pup = (Point){nrand(l->width-4)+2, nrand(l->height-4)+2};
 	tileat(l, pup)->feat = TUPSTAIR;
 	setflagat(l, pup, Fhasfeature);
 	l->up = pup;
@@ -99,13 +106,13 @@ gen(Level *l)
 	space--;
 
 	while(1){
-		pdown = (Point){nrand(l->width-2)+1, nrand(l->height-2)+1};
+		pdown = (Point){nrand(l->width-4)+2, nrand(l->height-4)+2};
 		/* already upstair? */
 		if(flagat(l, pdown) & Fhasfeature)
 			continue;
 		/* too close? */
 		p = subpt(pup, pdown);
-		if(sqrt(p.x*p.x+p.y*p.y) < 5.0)
+		if(sqrt(p.x*p.x+p.y*p.y) < 6.0)
 			continue;
 		setflagat(l, pdown, Fhasfeature);
 		tileat(l, pdown)->feat = TDOWNSTAIR;
