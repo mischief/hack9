@@ -261,14 +261,6 @@ redraw(UI *ui, int new)
 	flushimage(display, 1);
 }
 
-static int
-min(int a, int b)
-{
-	if(a < b)
-		return a;
-	return b;
-}
-
 void
 movemons(void)
 {

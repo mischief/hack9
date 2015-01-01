@@ -50,15 +50,19 @@ maction(Monster *m, int what, Point where)
 		if(hasflagat(m->l, where, Fhasmonster) && targ->monst != nil){
 			/* monster; attack it */
 			dmg = roll(m->md->atk, m->md->rolls);
-			warn("the %s hits for %d!", m->md->name, dmg);
-			mtarg = targ->monst;
-			mtarg->hp -= dmg;
-			if(mtarg->hp < 1){
-				dbg("the %s is killed!", mtarg->md->name);
-				clrflagat(m->l, where, Fhasmonster|Fblocked);
-				free(mtarg);
-				targ->monst = nil;
-				targ->unit = 0;
+			if(dmg <= 0)
+				warn("the %s misses!", m->md->name);
+			else {
+				warn("the %s hits for %d!", m->md->name, dmg);
+				mtarg = targ->monst;
+				mtarg->hp -= dmg;
+				if(mtarg->hp < 1){
+					dbg("the %s is killed!", mtarg->md->name);
+					clrflagat(m->l, where, Fhasmonster|Fblocked);
+					free(mtarg);
+					targ->monst = nil;
+					targ->unit = 0;
+				}
 			}
 
 			/* no movement */
