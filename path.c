@@ -47,6 +47,10 @@ pathfind(Level *l, Point start, Point end, Point **path)
 	PNode *nodes, *p, *neighbor, *head, *tmp, *rev;
 	Priq *q;
 
+	assert(ptinrect(start, l->r));
+	assert(ptinrect(end, l->r));
+	assert(path != nil);
+
 	npath = -1;
 
 	if(eqpt(start, end))

@@ -4,6 +4,7 @@
 #include <draw.h>
 #include <keyboard.h>
 #include <mouse.h>
+#include <pool.h>
 
 #include "dat.h"
 
@@ -68,7 +69,7 @@ initui(char *name)
 	if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil)
 		sysfatal("opentile: %r");
 
-	if((ui.cols = mallocz(2 * sizeof(Image*), 1)) == nil)
+	if((ui.cols = mallocz(5 * sizeof(Image*), 1)) == nil)
 		sysfatal("malloc cols: %r");
 
 	ui.cols[CGREEN] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DGreen);
@@ -296,6 +297,8 @@ movemons(void)
 		/* it's possible the monster died in the meantime. */
 		if(m == nil)
 			continue;
+		mupdate(m);
+		continue;
 
 		if(manhattan(p, player->pt) < 6 * ORTHOCOST){
 			/* move the monster toward player */
@@ -328,6 +331,8 @@ threadmain(int argc, char *argv[])
 
 	ARGBEGIN{
 	}ARGEND
+
+	mainmem->flags = POOL_PARANOIA;
 
 	srand(truerand());
 

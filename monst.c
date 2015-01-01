@@ -32,9 +32,38 @@ missing:
 }
 
 int
+mupdate(Monster *m)
+{
+	if(m->aglobal != nil)
+		m->aglobal->exec(m);
+	fprint(2, "updating '%s' @ %P\n", m->md->name, m->pt);
+	if(m->acur != nil)
+		m->acur->exec(m);
+
+	return 0;
+}
+
+void
+mchangestate(Monster *m, AIState *a)
+{
+	assert(a != nil);
+	m->aprev = m->acur;
+	if(m->acur != nil)
+		m->acur->exit(m);
+	m->acur = a;
+	m->acur->enter(m);
+}
+
+void
+mrevertstate(Monster *m)
+{
+	mchangestate(m, m->aprev);
+}
+
+int
 maction(Monster *m, int what, Point where)
 {
-	uint dmg;
+	int dmg;
 	Tile *cur, *targ;
 	Monster *mtarg;
 
@@ -49,12 +78,12 @@ maction(Monster *m, int what, Point where)
 		targ = tileat(m->l, where);
 		if(hasflagat(m->l, where, Fhasmonster) && targ->monst != nil){
 			/* monster; attack it */
-			dmg = roll(m->md->atk, m->md->rolls);
+			mtarg = targ->monst;
+			dmg = roll(m->md->atk, m->md->rolls) - mtarg->md->def;
 			if(dmg <= 0)
 				warn("the %s misses!", m->md->name);
 			else {
 				warn("the %s hits for %d!", m->md->name, dmg);
-				mtarg = targ->monst;
 				mtarg->hp -= dmg;
 				if(mtarg->hp < 1){
 					dbg("the %s is killed!", mtarg->md->name);

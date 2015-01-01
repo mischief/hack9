@@ -62,7 +62,7 @@ drunken(Level *l, int type)
 	Point p, *path;
 	Tile *t;
 
-	cnt = ((l->width * l->height) / 6); //* 2;
+	cnt = ((l->width * l->height) / 4); //* 2;
 
 redo:
 	/* fill */
@@ -125,7 +125,8 @@ gen(Level *l)
 	space += drunken(l, TTREE);
 
 	/* some monsters */
-	q = (l->width*l->height) / 20;
+	q = (l->width*l->height) / 40;
+	q += 2;
 	rnd = nrand(q)+q;
 	for(i = 0; i < rnd && space > 10; i++){
 		do {
@@ -140,6 +141,9 @@ gen(Level *l)
 		m->pt = p;
 		t->monst = m;
 		setflagat(l, p, Fblocked|Fhasmonster);
+
+		/* setup ai state */
+		idlestate(m);
 
 		space--;
 	}

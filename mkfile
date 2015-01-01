@@ -7,6 +7,7 @@ HFILES=\
 	alg.h\
 
 OFILES=\
+	ai.$O\
 	alg.$O\
 	camera.$O\
 	hack9.$O\

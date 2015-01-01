@@ -1,3 +1,4 @@
+typedef struct AIState AIState;
 typedef struct Tileset Tileset;
 typedef struct Tile Tile;
 typedef struct Portal Portal;
@@ -11,6 +12,17 @@ void msg(char *fmt, ...);
 void good(char *fmt, ...);
 void warn(char *fmt, ...);
 void dbg(char *fmt, ...);
+
+struct AIState
+{
+	void *aux;
+	void (*enter)(Monster *);
+	void (*exec)(Monster *);
+	void (*exit)(Monster *);
+};
+
+/* ai.c */
+void idlestate(Monster *m);
 
 struct Tileset
 {
@@ -37,6 +49,7 @@ struct MonsterData
 {
 	char *name;
 	uint maxhp;
+	uint def;
 	uint atk;
 	uint rolls;
 };
@@ -64,11 +77,18 @@ struct Monster
 	/* current hp */
 	long hp;
 
+
+	AIState *acur;
+	AIState *aprev;
+	AIState *aglobal;
+
 	/* no free */
 	MonsterData *md;
 };
 
 Monster *monst(int idx);
+int mupdate(Monster *m);
+void mchangestate(Monster *m, AIState *a);
 int maction(Monster *m, int what, Point where);
 
 /* well known tiles, also indexes into monstdata */
@@ -190,4 +210,3 @@ extern Point cardinals[];
 int roll(int count, int sides);
 int min(int a, int b);
 int max(int a, int b);
-
