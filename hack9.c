@@ -191,30 +191,49 @@ move(Point src, int dir)
 void
 movemons(void)
 {
-	int movdir, npath;
-	Point p, p2, *path;
+	int i, movdir, nmove, npath;
+	Point p, p2, *tomove, *path;
 
+	nmove = 0;
 	for(p.x = 0; p.x < level->width; p.x++){
 		for(p.y = 0; p.y < level->height; p.y++){
-			if(!eqpt(p, pos) && hasflagat(level, p, Fhasmonster)){
-				if(manhattan(p, pos) < 6 * ORTHOCOST){
-					/* move the monster toward player */
-					npath = pathfind(level, p, pos, &path);
-					if(npath >= 0){
-						/* step once along path, path[0] is cur pos */
-						p2 = subpt(p, path[1]);
-						double ang = atan2(p2.y, p2.x);
-						movdir = (int)(4 * ang / (2*PI) + 4.5) % 4;
-						p2 = move(p, movdir+1);
-						free(path);
-					}
-				} else {
-					/* random move */
-					move(p, nrand(4)+1);
-				}
-			}
+			if(!eqpt(p, pos) && hasflagat(level, p, Fhasmonster))
+				nmove++;
 		}
 	}
+
+	tomove = mallocz(sizeof(Point)*nmove, 1);
+	if(tomove == nil)
+		sysfatal("movemons: %r");
+
+	i = 0;
+	for(p.x = 0; p.x < level->width; p.x++){
+		for(p.y = 0; p.y < level->height; p.y++){
+			if(!eqpt(p, pos) && hasflagat(level, p, Fhasmonster))
+				tomove[i++] = p;
+		}
+	}
+
+	for(i = 0; i < nmove; i++){
+		p = tomove[i];
+		if(manhattan(p, pos) < 6 * ORTHOCOST){
+			/* move the monster toward player */
+			npath = pathfind(level, p, pos, &path);
+			if(npath >= 0){
+				/* step once along path, path[0] is cur pos */
+				p2 = subpt(p, path[1]);
+				double ang = atan2(p2.y, p2.x);
+				movdir = (int)(4 * ang / (2*PI) + 4.5) % 4;
+				p2 = move(p, movdir+1);
+				free(path);
+			}
+		} else {
+			/* random move */
+			move(p, nrand(4)+1);
+		}
+	}
+
+	free(tomove);
 }
 
 void
