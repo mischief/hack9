@@ -36,7 +36,6 @@ mupdate(Monster *m)
 {
 	if(m->aglobal != nil)
 		m->aglobal->exec(m);
-	fprint(2, "updating '%s' @ %P\n", m->md->name, m->pt);
 	if(m->acur != nil)
 		m->acur->exec(m);
 
