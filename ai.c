@@ -41,8 +41,6 @@ idleexec(Monster *m)
 		} while(!ptinrect(p, m->l->r) ||  hasflagat(m->l, p, Fblocked) || manhattan(m->pt, p) < ORTHOCOST*2);
 		d->npath = pathfind(m->l, m->pt, p, &d->path);
 		d->next = 1;
-
-		fprint(2, "pathfind('%s', %P, %P) = %d %#p\n", m->md->name, m->pt, p, d->next, d->path);
 	}
 
 	if(d->path == nil)
