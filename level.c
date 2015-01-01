@@ -37,7 +37,7 @@ drunk1(Level *l, Point p, int n)
 
 	last = 0;
 	while(n > 0){
-		if(nrand(3) == 0)
+		if(nrand(4) == 0)
 			cur = nrand(NCARDINAL);
 		else
 			cur = last;
@@ -62,7 +62,7 @@ drunken(Level *l, int type)
 	Point p, *path;
 	Tile *t;
 
-	cnt = ((l->width * l->height) / 8); //* 2;
+	cnt = ((l->width * l->height) / 6); //* 2;
 
 redo:
 	/* fill */

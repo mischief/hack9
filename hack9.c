@@ -166,7 +166,7 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 void
 drawui(Rectangle r)
 {
-	int i, j;
+	int i, j, logline;
 	Point p;
 	Image *c;
 	char buf[256];
@@ -174,11 +174,13 @@ drawui(Rectangle r)
 
 	draw(screen, r, display->black, nil, ZP);
 
+	logline = Dy(r) - (font->height*2);
+
 	p = r.min;
-	p.y += font->height * 2;
+	p.y += logline-font->height;
 
 	m = ui.msg;
-	for(i = 3; m != nil && i > 0; i--){
+	for(i = logline/font->height; m != nil && i > 0; i--){
 		snprint(buf, sizeof(buf), "%s", m->msg);
 		string(screen, p, ui.cols[m->color], ZP, font, buf);
 		p.y -= font->height;
@@ -186,7 +188,7 @@ drawui(Rectangle r)
 	}
 
 	p = r.min;
-	p.y += font->height * 3;
+	p.y += logline;
 	line(screen, p, Pt(screen->r.max.x, p.y), Enddisc, Enddisc, 0, display->white, ZP);
 
 	if(gameover>0)
@@ -230,19 +232,21 @@ view(Point pos, Level *l, int scrwidth, int scrheight)
 void
 redraw(UI *ui, int new)
 {
-	int width, height;
+	int width, height, uisz;
+
+	uisz = 7;
 
 	if(new){
 		if(getwindow(display, Refnone) < 0)
 			sysfatal("getwindow: %r");
 
 		/* height should be big enough for 5 tiles, and 5 text lines. */
-		if(Dx(screen->r) < 300 || Dy(screen->r) < (ui->tiles->height*5 + font->height*5)){
+		if(Dx(screen->r) < 300 || Dy(screen->r) < (ui->tiles->height*5 + font->height*uisz)){
 			fprint(2, "window %R too small\n", screen->r);
 			return;
 		}
 
-		ui->uir = Rpt(Pt(screen->r.min.x, screen->r.max.y-(font->height*5)), screen->r.max);
+		ui->uir = Rpt(Pt(screen->r.min.x, screen->r.max.y-(font->height*uisz)), screen->r.max);
 	}
 
 	width = Dx(screen->r) / ui->tiles->width;
@@ -345,7 +349,6 @@ threadmain(int argc, char *argv[])
 	player = monst(TWIZARD);
 	if(player == nil)
 		sysfatal("monst: %r");
-	player->hp = 5;
 	player->l = level;
 	player->pt = level->up;
 	t = tileat(level, player->pt);
@@ -431,7 +434,8 @@ threadmain(int argc, char *argv[])
 					msg("ouch!");
 			}
 
-			if(++turns % 2 ==0){
+			turns++;
+			if(turns % 2 ==0){
 				movemons();
 			}
 

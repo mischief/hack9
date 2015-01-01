@@ -38,6 +38,7 @@ struct MonsterData
 	char *name;
 	uint maxhp;
 	uint atk;
+	uint rolls;
 };
 
 extern MonsterData monstdata[392];
@@ -186,4 +187,4 @@ enum
 };
 
 extern Point cardinals[];
-
+uint roll(uint count, uint sides);

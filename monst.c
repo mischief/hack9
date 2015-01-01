@@ -34,6 +34,7 @@ missing:
 int
 maction(Monster *m, int what, Point where)
 {
+	uint dmg;
 	Tile *cur, *targ;
 	Monster *mtarg;
 
@@ -48,9 +49,10 @@ maction(Monster *m, int what, Point where)
 		targ = tileat(m->l, where);
 		if(hasflagat(m->l, where, Fhasmonster) && targ->monst != nil){
 			/* monster; attack it */
-			warn("the %s hits!", m->md->name);
+			dmg = roll(m->md->atk, m->md->rolls);
+			warn("the %s hits for %d!", m->md->name, dmg);
 			mtarg = targ->monst;
-			mtarg->hp -= m->md->atk;
+			mtarg->hp -= dmg;
 			if(mtarg->hp < 1){
 				dbg("the %s is killed!", mtarg->md->name);
 				clrflagat(m->l, where, Fhasmonster|Fblocked);
