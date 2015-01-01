@@ -1,4 +1,17 @@
 typedef struct Tileset Tileset;
+typedef struct Tile Tile;
+typedef struct Portal Portal;
+typedef struct Level Level;
+typedef struct MonsterData MonsterData;
+typedef struct Monster Monster;
+typedef struct Camera Camera;
+
+/* hack9.c */
+void msg(char *fmt, ...);
+void good(char *fmt, ...);
+void warn(char *fmt, ...);
+void dbg(char *fmt, ...);
+
 struct Tileset
 {
 	/* of each tile */
@@ -13,13 +26,13 @@ struct Tileset
 	Image *image;
 };
 
+/* tile.c */
 Tileset *opentile(char *name, int width, int height);
 void freetile(Tileset *t);
 
 /* draw i'th tile onto dst */
 void drawtile(Tileset *t, Image *dst, Point p, int i);
 
-typedef struct MonsterData MonsterData;
 struct MonsterData
 {
 	char *name;
@@ -29,16 +42,33 @@ struct MonsterData
 
 extern MonsterData monstdata[392];
 
-typedef struct Monster Monster;
+/* possible moves */
+enum
+{
+	MNONE,
+	MMOVE,	/* also attack */
+	MUSE,
+};
+
 struct Monster
 {
-	int hp;
+	/* current level */
+	Level *l;
+	/* location */
+	Point pt;
 
-	/* doesn't need to be free'd */
+	/* alignment */
+	char align;
+
+	/* current hp */
+	long hp;
+
+	/* no free */
 	MonsterData *md;
 };
 
 Monster *monst(int idx);
+int maction(Monster *m, int what, Point where);
 
 /* well known tiles, also indexes into monstdata */
 enum
@@ -59,11 +89,21 @@ enum
 	TDOWNSTAIR	= 852,
 };
 
-typedef struct Tile Tile;
+struct Portal
+{
+	/* where it takes us to */
+	Level *to;
+	/* location in to */
+	Point pt;
+};
+
 struct Tile
 {
 	/* current monster occupying tile */
 	Monster *monst;
+
+	/* has a portal */
+	Portal *portal;
 	/*
 	Feature *feat;
 	Item *items[10];
@@ -90,9 +130,9 @@ enum
 	Fhasitem	= 0x4,
 	Fhasfeature	= 0x8,
 	Fblocked	= 0x10,
+	Fportal		= 0x20,
 };
 
-typedef struct Level Level;
 struct Level
 {
 	int width;
@@ -114,7 +154,6 @@ Tile *tileat(Level *l, Point p);
 #define clrflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) &= ~(F))
 Point *lneighbor(Level *l, Point p, int *n);
 
-typedef struct Camera Camera;
 struct Camera
 {
 	Point pos;
@@ -134,4 +173,17 @@ enum {
 /* path.c */
 int manhattan(Point cur, Point targ);
 int pathfind(Level *l, Point start, Point end, Point **path);
+
+/* util.c */
+enum
+{
+	NORTH,
+	SOUTH,
+	EAST,
+	WEST,
+	NCARDINAL,
+	NODIR,
+};
+
+extern Point cardinals[];
 

@@ -29,7 +29,7 @@ static void
 drunk1(Level *l, Point p, int n)
 {
 	int cur, last;
-	Point next, dir[] = { Pt(1, 0), Pt(-1, 0), Pt(0, 1), Pt(0, -1) };
+	Point next;
 	Rectangle clipr;
 	Tile *t;
 
@@ -38,10 +38,10 @@ drunk1(Level *l, Point p, int n)
 	last = 0;
 	while(n > 0){
 		if(nrand(3) == 0)
-			cur = nrand(nelem(dir));
+			cur = nrand(NCARDINAL);
 		else
 			cur = last;
-		next = addpt(p, dir[cur]);
+		next = addpt(p, cardinals[cur]);
 		if(!ptinrect(next, clipr))
 			continue;
 		last = cur;
@@ -62,7 +62,7 @@ drunken(Level *l, int type)
 	Point p, *path;
 	Tile *t;
 
-	cnt = ((l->width * l->height) / 4); //* 2;
+	cnt = ((l->width * l->height) / 8); //* 2;
 
 redo:
 	/* fill */
@@ -92,40 +92,40 @@ redo:
 static void
 gen(Level *l)
 {
-	int i, q, rnd, space;
-	Point pup, pdown, p;
+	int i, q, rnd, space, npath;
+	Point pup, pdown, p, *path;
 	Tile *t;
-
-	space = l->width*l->height;
+	Monster *m;
 
 	pup = (Point){nrand(l->width-4)+2, nrand(l->height-4)+2};
 	tileat(l, pup)->feat = TUPSTAIR;
-	setflagat(l, pup, Fhasfeature);
+	setflagat(l, pup, Fhasfeature|Fportal);
 	l->up = pup;
-
-	space--;
 
 	while(1){
 		pdown = (Point){nrand(l->width-4)+2, nrand(l->height-4)+2};
 		/* already upstair? */
-		if(flagat(l, pdown) & Fhasfeature)
+		if(flagat(l, pdown) & Fportal)
 			continue;
 		/* too close? */
 		p = subpt(pup, pdown);
-		if(sqrt(p.x*p.x+p.y*p.y) < 6.0)
+		if((npath = pathfind(l, pup, pdown, &path)) < 0)
+			sysfatal("pathfind: %r");
+		free(path);
+		if(npath < sqrt(l->width * l->height)-4)
 			continue;
-		setflagat(l, pdown, Fhasfeature);
+		setflagat(l, pdown, Fhasfeature|Fportal);
 		tileat(l, pdown)->feat = TDOWNSTAIR;
 		l->down = pdown;
 		break;
 	}
 
-	space--;
+	space = 0;
 
-	space -= drunken(l, TTREE);
+	space += drunken(l, TTREE);
 
 	/* some monsters */
-	q = (l->width*l->height) / 10;
+	q = (l->width*l->height) / 20;
 	rnd = nrand(q)+q;
 	for(i = 0; i < rnd && space > 10; i++){
 		do {
@@ -134,8 +134,11 @@ gen(Level *l)
 
 		t = tileat(l, p);
 		q = nrand(4)+TSOLDIER;
-		t->unit = q; //nrand(320);
-		t->monst = monst(q);
+		t->unit = q;
+		m = monst(q);
+		m->l = l;
+		m->pt = p;
+		t->monst = m;
 		setflagat(l, p, Fblocked|Fhasmonster);
 
 		space--;

@@ -7,14 +7,15 @@ HFILES=\
 	alg.h\
 
 OFILES=\
-	hack9.$O\
-	tile.$O\
-	camera.$O\
-	level.$O\
-	path.$O\
 	alg.$O\
+	camera.$O\
+	hack9.$O\
+	level.$O\
 	monst.$O\
 	monstdata.$O\
+	path.$O\
+	tile.$O\
+	util.$O\
 
 CLEANFILES=$O.alg
 

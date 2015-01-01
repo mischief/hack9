@@ -9,28 +9,125 @@
 
 enum
 {
-	LSIZE	= 10,
+	LSIZE	= 20,
 };
 
-Mousectl *mc;
-Keyboardctl *kc;
+static long turn = 0;
+static Level *level;
+static char *user;
+static Monster *player;
+static int gameover = 0;
 
-Tileset *tiles;
-Level *level;
-
-/* in tiles */
-Point campos;
-
-/* of player */
-Point pos;
-
-static int
-min(int a, int b)
+enum
 {
-	if(a < b)
-		return a;
-	return b;
+	CGREEN,
+	CYELLOW,
+	CORANGE,
+	CRED,
+	CGREY,
+};
+
+typedef struct Msg Msg;
+struct Msg
+{
+	char	msg[256];
+	ulong	color;
+	Msg		*next;
+};
+
+typedef struct UI UI;
+struct UI
+{
+	Image **cols;
+	Mousectl *mc;
+	Keyboardctl *kc;
+	Channel *msgc;
+	Msg *msg;
+	int nmsg;
+	Tileset *tiles;
+	Rectangle viewr;
+	Rectangle uir;
+	Point camp;
+} ui;
+
+static void
+initui(char *name)
+{
+	if(initdraw(nil, nil, name) < 0)
+		sysfatal("initdraw: %r");
+
+	if((ui.mc = initmouse(nil, screen)) == nil)
+		sysfatal("initmouse: %r");
+
+	if((ui.kc = initkeyboard(nil)) == nil)
+		sysfatal("initkeyboard: %r");
+
+	if((ui.msgc = chancreate(sizeof(Msg*), 100)) == nil)
+		sysfatal("chancreate: %r");
+
+	if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil)
+		sysfatal("opentile: %r");
+
+	if((ui.cols = mallocz(2 * sizeof(Image*), 1)) == nil)
+		sysfatal("malloc cols: %r");
+
+	ui.cols[CGREEN] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DGreen);
+	ui.cols[CYELLOW] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DYellow);
+	ui.cols[CORANGE] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xFFA500FF);
+	ui.cols[CRED] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DRed);
+	ui.cols[CGREY] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xAAAAAAFF);
 }
+
+static void
+uimsg(uint color, char *fmt, va_list arg)
+{
+	Msg *l;
+
+	l = mallocz(sizeof(Msg), 1);
+	assert(l != nil);
+	l->color = color;
+	vsnprint(l->msg, sizeof(l->msg)-1, fmt, arg);
+
+	while(nbsendp(ui.msgc, l) == 0)
+		yield();
+}
+
+void
+msg(char *fmt, ...)
+{
+	va_list arg;
+	va_start(arg, fmt);
+	uimsg(CGREY, fmt, arg);
+	va_end(arg);
+}
+
+void
+good(char *fmt, ...)
+{
+	va_list arg;
+	va_start(arg, fmt);
+	uimsg(CGREEN, fmt, arg);
+	va_end(arg);
+}
+
+void
+warn(char *fmt, ...)
+{
+	va_list arg;
+	va_start(arg, fmt);
+	uimsg(CYELLOW, fmt, arg);
+	va_end(arg);
+}
+
+void
+dbg(char *fmt, ...)
+{
+	va_list arg;
+	va_start(arg, fmt);
+	uimsg(CRED, fmt, arg);
+	va_end(arg);
+}
+
 
 /* draw the whole level on the screen using tileset ts.
  * r.min is the upper left visible tile, and r.max is
@@ -43,15 +140,13 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 	Point xy, tpos;
 	Tile *t;
 
-	draw(screen, screen->r, display->black, nil, ZP);
-
 	for(x = r.min.x; x < r.max.x; x++){
 		for(y = r.min.y; y < r.max.y; y++){
 			/* world cell */
 			xy = (Point){x, y};
 			/* screen space */
 			tpos = xy;
-			tpos = addpt(tpos, campos);
+			tpos = addpt(tpos, ui.camp);
 			tpos.x *= ts->width;
 			tpos.y *= ts->height;
 			tpos = addpt(tpos, screen->r.min);
@@ -68,6 +163,57 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 	}
 }
 
+void
+drawui(Rectangle r)
+{
+	int i, j;
+	Point p;
+	Image *c;
+	char buf[256];
+	Msg *m;
+
+	draw(screen, r, display->black, nil, ZP);
+
+	p = r.min;
+	p.y += font->height * 2;
+
+	m = ui.msg;
+	for(i = 3; m != nil && i > 0; i--){
+		snprint(buf, sizeof(buf), "%s", m->msg);
+		string(screen, p, ui.cols[m->color], ZP, font, buf);
+		p.y -= font->height;
+		m = m->next;
+	}
+
+	p = r.min;
+	p.y += font->height * 3;
+	line(screen, p, Pt(screen->r.max.x, p.y), Enddisc, Enddisc, 0, display->white, ZP);
+
+	if(gameover>0)
+		return;
+
+	snprint(buf, sizeof(buf), "%s the %s", user, player->md->name);
+	p = string(screen, p, display->white, ZP, font, buf);
+	p.x += 10;
+
+	p.x = r.min.x;
+	p.y += font->height;
+	snprint(buf, sizeof(buf), "T:%ld ", turn);
+	p = string(screen, p, display->white, ZP, font, buf);
+
+	snprint(buf, sizeof(buf), "%ld/%d HP ", player->hp, player->md->maxhp);
+	i = player->hp, j = player->md->maxhp;
+	if(i > (j/4)*3)
+		c = ui.cols[CGREEN];
+	else if(i > j/2)
+		c = ui.cols[CYELLOW];
+	else if(i > j/4)
+		c = ui.cols[CORANGE];
+	else
+		c = ui.cols[CRED];
+	p = string(screen, p, c, ZP, font, buf);
+}
+
 Rectangle
 view(Point pos, Level *l, int scrwidth, int scrheight)
 {
@@ -75,129 +221,61 @@ view(Point pos, Level *l, int scrwidth, int scrheight)
 	Rectangle r;
 
 	/* compute vieweable area of the map */
-	p = Pt((scrwidth/2)+2, (scrheight/2)+2);
+	p = Pt((scrwidth/2)+2, (scrheight/2));
 	r = Rpt(subpt(pos, p), addpt(pos, p));
 	rectclip(&r, Rect(0, 0, l->width, l->height));
 	return r;
 }
 
-enum
+void
+redraw(UI *ui, int new)
 {
-	DUMMY,
-	WEST,
-	NORTH,
-	EAST,
-	SOUTH,
-	UP,
-	DOWN,
-};
+	int width, height;
 
-/* attempt to move the monster/player at src in dir direction
- * return delta in Point if moved, ZP if not */
-static Point
-move(Point src, int dir)
+	if(new){
+		if(getwindow(display, Refnone) < 0)
+			sysfatal("getwindow: %r");
+
+		/* height should be big enough for 5 tiles, and 5 text lines. */
+		if(Dx(screen->r) < 300 || Dy(screen->r) < (ui->tiles->height*5 + font->height*5)){
+			fprint(2, "window %R too small\n", screen->r);
+			return;
+		}
+
+		ui->uir = Rpt(Pt(screen->r.min.x, screen->r.max.y-(font->height*5)), screen->r.max);
+	}
+
+	width = Dx(screen->r) / ui->tiles->width;
+	height = (Dy(screen->r) - (font->height*2)) / ui->tiles->height;
+	if(gameover<1){
+		ui->viewr = view(player->pt, level, width, height);
+		ui->camp = subpt(Pt(width/2, height/2), player->pt);
+		draw(screen, screen->r, display->black, nil, ZP);
+		drawlevel(level, ui->tiles, ui->viewr);
+	}
+	drawui(ui->uir);
+	flushimage(display, 1);
+}
+
+static int
+min(int a, int b)
 {
-	int *adj, c, lim, what;
-	Point dst;
-	Tile *t, *t2;
-	Monster *m;
-
-	adj = nil;
-	c = lim = 0;
-	dst = src;
-
-	switch(dir){
-	default:
-		fprint(2, "unknown move %d\n", dir);
-	case DUMMY:
-		return ZP;
-		break;
-	case NORTH:
-		c = -1;
-	if(0){
-	case SOUTH:
-		c = 1;
-	}
-		lim = level->height;
-		adj = &dst.y;
-		break;
-	case WEST:
-		c = -1;
-	if(0){
-	case EAST:
-		c = 1;
-	}
-		lim = level->width;
-		adj = &dst.x;
-		break;
-
-	/* special cases; use stairs, change level */
-	case UP:
-	case DOWN:
-		t = tileat(level, src);
-		what = t->unit;
-		if(t->feat == (dir==UP ? TUPSTAIR : TDOWNSTAIR)){
-			m = t->monst;
-			t->monst = nil;
-			freelevel(level);
-			if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE)) == nil)
-				sysfatal("genlevel: %r");
-
-			if(dir == UP)
-				dst = level->down;
-			else
-				dst = level->up;
-
-			t = tileat(level, dst);
-			t->unit = what;
-			t->monst = m;
-			setflagat(level, dst, Fhasmonster|Fblocked);
-			return subpt(src, dst);
-		}
-		break;
-	}
-
-	if(adj && *adj + c >= 0 && *adj + c < lim){
-		*adj += c;
-		t = tileat(level, dst);
-		if(eqpt(src, pos) && hasflagat(level, dst, Fblocked) && t->monst != nil){
-			/* monster; attack it */
-			if(--t->monst->hp == 0){
-				free(t->monst);
-				t->monst = nil;
-				t->unit = 0;
-				clrflagat(level, dst, Fhasmonster|Fblocked);
-			}
-
-			/* no movement */
-			return ZP;
-		}
-		if(!hasflagat(level, dst, Fblocked)){
-			/* move */
-			t2 = tileat(level, src);
-			setflagat(level, dst, (Fhasmonster|Fblocked));
-			clrflagat(level, src, (Fhasmonster|Fblocked));
-			t->unit = t2->unit;
-			t2->unit = 0;
-			t->monst = t2->monst;
-			t2->monst = nil;
-			return subpt(src, dst);
-		}
-	}
-
-	return ZP;
+	if(a < b)
+		return a;
+	return b;
 }
 
 void
 movemons(void)
 {
-	int i, movdir, nmove, npath;
+	int i, nmove, npath;
 	Point p, p2, *tomove, *path;
+	Monster *m;
 
 	nmove = 0;
 	for(p.x = 0; p.x < level->width; p.x++){
 		for(p.y = 0; p.y < level->height; p.y++){
-			if(!eqpt(p, pos) && hasflagat(level, p, Fhasmonster))
+			if(!eqpt(p, player->pt) && hasflagat(level, p, Fhasmonster))
 				nmove++;
 		}
 	}
@@ -209,27 +287,32 @@ movemons(void)
 	i = 0;
 	for(p.x = 0; p.x < level->width; p.x++){
 		for(p.y = 0; p.y < level->height; p.y++){
-			if(!eqpt(p, pos) && hasflagat(level, p, Fhasmonster))
+			if(!eqpt(p, player->pt) && hasflagat(level, p, Fhasmonster))
 				tomove[i++] = p;
 		}
 	}
 
 	for(i = 0; i < nmove; i++){
 		p = tomove[i];
-		if(manhattan(p, pos) < 6 * ORTHOCOST){
+		m = tileat(level, p)->monst;
+
+		/* it's possible the monster died in the meantime. */
+		if(m == nil)
+			continue;
+
+		if(manhattan(p, player->pt) < 6 * ORTHOCOST){
 			/* move the monster toward player */
-			npath = pathfind(level, p, pos, &path);
+			npath = pathfind(level, m->pt, player->pt, &path);
 			if(npath >= 0){
 				/* step once along path, path[0] is cur pos */
-				p2 = subpt(p, path[1]);
-				double ang = atan2(p2.y, p2.x);
-				movdir = (int)(4 * ang / (2*PI) + 4.5) % 4;
-				p2 = move(p, movdir+1);
+				maction(m, MMOVE, path[1]);
 				free(path);
 			}
 		} else {
 			/* random move */
-			move(p, nrand(4)+1);
+			p2 = addpt(m->pt, cardinals[nrand(NCARDINAL)]);
+			if(!hasflagat(level, p2, Fblocked))
+				maction(m, MMOVE, p2);
 		}
 	}
 
@@ -240,11 +323,10 @@ void
 threadmain(int argc, char *argv[])
 {
 	Rune c;
+	Msg *l, *lp;
 	
 	/* of viewport, in size of tiles */
-	int width, height, movdir;
-	Rectangle r;
-	Point p;
+	int move, dir;
 	Tile *t;
 
 	ARGBEGIN{
@@ -252,112 +334,131 @@ threadmain(int argc, char *argv[])
 
 	srand(truerand());
 
-	if(initdraw(nil, nil, argv0) < 0)
-		sysfatal("initdraw: %r");
+	user = getenv("user");
 
-	if((mc = initmouse(nil, screen)) == nil)
-		sysfatal("initmouse: %r");
-
-	if((kc = initkeyboard(nil)) == nil)
-		sysfatal("initkeyboard: %r");
-
-	if((tiles = opentile("nethack.32x32", 32, 32)) == nil)
-		sysfatal("opentile: %r");
+	initui(argv0);
 
 	if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE)) == nil)
 		sysfatal("genlevel: %r");
 
 	/* the player */
-	pos = level->up;
-	t = tileat(level, pos);
+	player = monst(TWIZARD);
+	if(player == nil)
+		sysfatal("monst: %r");
+	player->hp = 5;
+	player->l = level;
+	player->pt = level->up;
+	t = tileat(level, player->pt);
 	t->unit = TWIZARD;
-	setflagat(level, pos, Fhasmonster|Fblocked);
+	t->monst = player;
+	setflagat(level, player->pt, Fhasmonster|Fblocked);
 
-	width = Dx(screen->r) / tiles->width;
-	height = Dy(screen->r) / tiles->height;
+	redraw(&ui, 1);
 
-	r = view(pos, level, width, height);
-	campos = subpt(Pt(width/2, height/2), pos);
-
-	drawlevel(level, tiles, r);
-	flushimage(display, 1);
-
-	enum { AMOUSE, ARESIZE, AKEYBOARD, AEND };
+	enum { AMOUSE, ARESIZE, AKEYBOARD, ALOG, AEND };
 	Alt a[AEND+1] = {
-		{ mc->c,		nil,	CHANRCV },
-		{ mc->resizec,	nil,	CHANRCV },
-		{ kc->c,		&c,		CHANRCV },
-		{ nil,			nil,	CHANEND },
+		{ ui.mc->c,			nil,	CHANRCV },
+		{ ui.mc->resizec,	nil,	CHANRCV },
+		{ ui.kc->c,			&c,		CHANRCV },
+		{ ui.msgc,			&l,		CHANRCV },
+		{ nil,				nil,	CHANEND },
 	};
+
+	static int turns=0;
 
 	for(;;){
 		switch(alt(a)){
 		case AMOUSE:
 			break;
 		case ARESIZE:
-			if(getwindow(display, Refnone) < 0)
-				sysfatal("getwindow: %r");
-			width = Dx(screen->r) / tiles->width;
-			height = Dy(screen->r) / tiles->height;
-
-			r = view(pos, level, width, height);
-			campos = subpt(Pt(width/2, height/2), pos);
-
-			drawlevel(level, tiles, r);
-			flushimage(display, 1);
+			redraw(&ui, 1);
 			break;
 		case AKEYBOARD:
-			movdir = DUMMY;
+			if(c == Kdel)
+				threadexitsall(nil);
+			if(gameover > 0){
+				dbg("you are dead. game over, man.");
+				break;
+			}
+
+			move = MNONE;
+			dir = NODIR;
+
+			if(turns % 5 == 0 && player->hp < player->md->maxhp){
+				good("you get 1 hp.");
+				ainc(&player->hp);
+			}
+
 			switch(c){
 			case Kdel:
 				threadexitsall(nil);
 				break;
 			case 'h':
 			case Kleft:
-				movdir = WEST;
+				move = MMOVE;
+				dir = WEST;
 				break;
 			case 'j':
 			case Kdown:
-				movdir = SOUTH;
+				move = MMOVE;
+				dir = SOUTH;
 				break;
 			case 'k':
 			case Kup:
-				movdir = NORTH;
+				move = MMOVE;
+				dir = NORTH;
 				break;
 			case 'l':
 			case Kright:
-				movdir = EAST;
+				move = MMOVE;
+				dir = EAST;
 				break;
 			case '<':
-				movdir = UP;
-				break;
 			case '>':
-				movdir = DOWN;
+				move = MUSE;
 				break;
 			case '.':
-				movdir = DUMMY;
 				break;
+			case ' ':
+				msg("");
 			default:
 				/* don't waste a move */
 				continue;
 			}
 
-			if(movdir != DUMMY){
-				p=move(pos, movdir);
-				if(!eqpt(p, ZP)){
-					pos = subpt(pos, p);
-				}
+			if(move != MNONE && dir != NODIR){
+				if(maction(player, move, addpt(player->pt, cardinals[dir])) < 0)
+					msg("ouch!");
 			}
 
-			static int turns=0;
-			if(++turns % 3 ==0){
+			if(++turns % 2 ==0){
 				movemons();
 			}
 
-			r = view(pos, level, width, height);
-			campos = subpt(Pt(width/2, height/2), pos);
-			drawlevel(level, tiles, r);
-			flushimage(display, 1);
+			ainc(&turn);
+
+			if(player->hp < 2){
+				gameover++;
+			}
+
+			redraw(&ui, 0);
+			break;
+		case ALOG:
+			if(ui.msg == nil){
+				ui.msg = l;
+				ui.nmsg = 1;
+			} else {
+				l->next = ui.msg;
+				ui.msg = l;
+				ui.nmsg++;
+				if(ui.nmsg > 10){
+					for(lp = ui.msg; lp->next != nil; lp = lp->next)
+						;
+					free(lp->next);
+					lp->next = nil;
+				}
+			}
+			redraw(&ui, 0);
 			break;
 		}
 	}
