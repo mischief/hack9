@@ -246,12 +246,13 @@ redraw(UI *ui, int new)
 			return;
 		}
 
-		ui->uir = Rpt(Pt(screen->r.min.x, screen->r.max.y-(font->height*uisz)), screen->r.max);
 	}
 
-	width = Dx(screen->r) / ui->tiles->width;
-	height = (Dy(screen->r) - (font->height*2)) / ui->tiles->height;
+	ui->uir = Rpt(Pt(screen->r.min.x, screen->r.max.y-(font->height*uisz)), screen->r.max);
+
 	if(gameover<1){
+		width = Dx(screen->r) / ui->tiles->width;
+		height = (Dy(screen->r) - (font->height*2)) / ui->tiles->height;
 		ui->viewr = view(player->pt, level, width, height);
 		ui->camp = subpt(Pt(width/2, height/2), player->pt);
 		draw(screen, screen->r, display->black, nil, ZP);
@@ -348,7 +349,7 @@ threadmain(int argc, char *argv[])
 	t->monst = player;
 	setflagat(level, player->pt, Fhasmonster|Fblocked);
 
-	redraw(&ui, 1);
+	redraw(&ui, 0);
 
 	enum { AMOUSE, ARESIZE, AKEYBOARD, ALOG, AEND };
 	Alt a[AEND+1] = {
