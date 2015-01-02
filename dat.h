@@ -15,6 +15,7 @@ void dbg(char *fmt, ...);
 
 struct AIState
 {
+	AIState *prev;
 	void *aux;
 	void (*enter)(Monster *);
 	void (*exec)(Monster *);
@@ -77,9 +78,8 @@ struct Monster
 	/* current hp */
 	long hp;
 
-
-	AIState *acur;
-	AIState *aprev;
+	/* ai state */
+	AIState *ai;
 	AIState *aglobal;
 
 	/* no free */
@@ -88,7 +88,8 @@ struct Monster
 
 Monster *monst(int idx);
 int mupdate(Monster *m);
-void mchangestate(Monster *m, AIState *a);
+void mpushstate(Monster *m, AIState *a);
+void mpopstate(Monster *m);
 int maction(Monster *m, int what, Point where);
 
 /* well known tiles, also indexes into monstdata */

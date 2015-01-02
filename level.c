@@ -125,7 +125,8 @@ gen(Level *l)
 	space += drunken(l, TTREE);
 
 	/* some monsters */
-	q = (l->width*l->height) / 40;
+	//q = (l->width*l->height) / 40;
+	q = (l->width*l->height) / 20;
 	q += 2;
 	rnd = nrand(q)+q;
 	for(i = 0; i < rnd && space > 10; i++){

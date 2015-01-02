@@ -15,6 +15,8 @@ struct idledata
 	int npath;
 	int next;
 	Point *path;
+	int blocked;
+	int idle;
 };
 
 static void
@@ -23,7 +25,7 @@ idleenter(Monster *m)
 	idledata *d;
 	d = mallocz(sizeof(idledata), 1);
 	assert(d != nil);
-	m->acur->aux = d;
+	m->ai->aux = d;
 }
 
 static void
@@ -31,8 +33,13 @@ idleexec(Monster *m)
 {
 	Point p;
 	idledata *d;
-	d = m->acur->aux;
+	d = m->ai->aux;
 	assert(d != nil);
+
+	if(d->idle < 4){
+		d->idle++;
+		return;
+	}
 
 	if(d->path == nil){
 		/* plan a new path */
@@ -41,12 +48,16 @@ idleexec(Monster *m)
 		} while(!ptinrect(p, m->l->r) ||  hasflagat(m->l, p, Fblocked) || manhattan(m->pt, p) < ORTHOCOST*2);
 		d->npath = pathfind(m->l, m->pt, p, &d->path);
 		d->next = 1;
+		d->blocked = 0;
+		d->idle = 0;
 	}
 
 	if(d->path == nil)
 		return;
 
+	/* reached end */
 	if(d->next == d->npath){
+		/* plan new route */
 reroute:
 		free(d->path);
 		d->path = nil;
@@ -56,9 +67,13 @@ reroute:
 	p = d->path[d->next];
 	
 	/* if the next move is blocked, reroute. */
-	if(hasflagat(m->l, p, Fblocked))
-		goto reroute;
+	if(hasflagat(m->l, p, Fblocked)){
+		if(++d->blocked > 4)
+			goto reroute;
+		return;
+	}
 
+	d->blocked = 0;
 	d->next++;
 
 	maction(m, MMOVE, p);
@@ -67,7 +82,7 @@ reroute:
 static void
 idleexit(Monster *m)
 {
-	free(m->acur->aux);
+	free(m->ai->aux);
 }
 
 void
@@ -80,6 +95,6 @@ idlestate(Monster *m)
 	i->exec = idleexec;
 	i->exit = idleexit;
 
-	mchangestate(m, i);
+	mpushstate(m, i);
 }
 

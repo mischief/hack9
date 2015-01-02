@@ -36,27 +36,32 @@ mupdate(Monster *m)
 {
 	if(m->aglobal != nil)
 		m->aglobal->exec(m);
-	if(m->acur != nil)
-		m->acur->exec(m);
+	if(m->ai != nil)
+		m->ai->exec(m);
 
 	return 0;
 }
 
 void
-mchangestate(Monster *m, AIState *a)
+mpushstate(Monster *m, AIState *a)
 {
 	assert(a != nil);
-	m->aprev = m->acur;
-	if(m->acur != nil)
-		m->acur->exit(m);
-	m->acur = a;
-	m->acur->enter(m);
+	a->prev = m->ai;
+	m->ai = a;
+	if(a->enter != nil)
+		a->enter(m);
 }
 
 void
-mrevertstate(Monster *m)
+mpopstate(Monster *m)
 {
-	mchangestate(m, m->aprev);
+	AIState *a;
+
+	a = m->ai;
+	m->ai = a->prev;
+	assert(m->ai != nil);
+	if(a->exit != nil)
+		a->exit(m);
 }
 
 int
