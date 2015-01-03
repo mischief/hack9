@@ -339,6 +339,13 @@ movemons(void)
 }
 
 void
+usage(void)
+{
+	fprint(2, "usage: %s [-d] [-u uisz]", argv0);
+	threadexitsall("usage");
+}
+
+void
 threadmain(int argc, char *argv[])
 {
 	Rune c;
@@ -354,9 +361,12 @@ threadmain(int argc, char *argv[])
 		debug++;
 		break;
 	case 'u':
-		uisz = atoi(EARGF(exits(nil)));
+		uisz = atoi(EARGF(usage()));
 		if(uisz < 3)
 			sysfatal("ui too small");
+		break;
+	default:
+		usage();
 	}ARGEND
 
 	srand(truerand());
