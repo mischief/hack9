@@ -28,6 +28,7 @@ enum
 	CRED,
 	CGREY,
 	CMAGENTA,
+	CEND,
 };
 
 typedef struct Msg Msg;
@@ -80,7 +81,7 @@ initui(char *name)
 		if((ui.tiles = opentile(buf, 32, 32)) == nil)
 		sysfatal("opentile: %r");
 
-	if((ui.cols = mallocz(5 * sizeof(Image*), 1)) == nil)
+	if((ui.cols = mallocz(CEND * sizeof(Image*), 1)) == nil)
 		sysfatal("malloc cols: %r");
 
 	ui.cols[CGREEN] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DGreen);
