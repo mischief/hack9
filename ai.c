@@ -155,55 +155,6 @@ wander(Monster *m)
 	return i;
 }
 
-static void
-attackenter(AIState *a)
-{
-	Monster *mt;
-	mt = a->aux;
-	incref(mt);
-}
-
-static void
-attackexec(AIState *a)
-{
-	int d;
-	Monster *m, *mtarg;
-	AIState *anew;
-	m = a->m;
-	mtarg = a->aux;
-
-	d = manhattan(m->pt, mtarg->pt);
-	if(mtarg->flags & Mdead || d > ORTHOCOST*5 ){
-		/* stop the chase */
-		anew = mpopstate(m);
-		freestate(anew);
-		return;
-	} else if(d > ORTHOCOST){
-		/* walk to target */
-		anew = walkto(m, mtarg->pt, 0);
-		mpushstate(m, anew);
-	} else {
-		/* attack! */
-		maction(m, MMOVE, mtarg->pt);
-	}
-}
-
-static void
-attackexit(AIState *a)
-{
-	Monster *mt;
-	mt = a->aux;
-	mfree(mt);
-}
-
-AIState*
-attack(Monster *m, Monster *targ)
-{
-	AIState *i;
-	i = mkstate("attack", m, targ, attackenter, attackexec, attackexit);
-	return i;
-}
-
 typedef struct walktodata walktodata;
 struct walktodata
 {
@@ -215,47 +166,76 @@ struct walktodata
 	int blocked;
 };
 
-static void
-walktoexec(AIState *a)
+static int
+walktoinner(AIState *a)
 {
-	int dist;
+	Point p;
 	walktodata *d;
 	Monster *m;
-	Point p;
-
 	d = a->aux;
 	m = a->m;
 
-	if(d->path == nil){
+	dbg("%s path → %P %d/%d", m->md->name, d->dst, d->next, d->npath);
+	if(d->path == nil || !eqpt(m->pt, d->dst)){
+		if(d->path != nil){
+			free(d->path);
+			d->path = nil;
+		}
+		/* plan route */
 		d->npath = pathfind(m->l, m->pt, d->dst, &d->path, Fblocked);
 		d->next = 1;
 		d->blocked = 0;
+		if(d->npath < 0){
+			dbg("%s route to %P blocked ", m->md->name, d->dst);
+			/* path not through monsters available? */
+			d->npath = pathfind(m->l, m->pt, d->dst, &d->path, Fhasfeature);
+			d->next = 1;
+			d->blocked = 0;
+			if(d->npath < 0){
+				return -1;
+			}
+		}
 	}
 
-	dist = manhattan(m->pt, d->dst);
-	/* reached end */
-	dbg("dist = %d path %#p %d/%d", dist, d->path, d->next, d->npath);
-	if(dist == ORTHOCOST || d->path == nil || d->next == d->npath){
-leave:
-		a = mpopstate(m);
-		freestate(a);
-		return;
+	if(d->next == d->npath){
+		free(d->path);
+		d->path = nil;
+		d->npath = 0;
+		return -1;
 	}
 
 	p = d->path[d->next];
-	dbg("next %P %06b", p, flagat(m->l, p));
+	//dbg("next %P %06b", p, flagat(m->l, p));
 
-	/* if the next move is blocked */
 	if(hasflagat(m->l, p, Fblocked)){
-		if(++d->blocked > d->wait)
-			goto leave;
-		return;
+		dbg("%s blocked %d/%d", m->md->name, d->blocked, d->wait);
+		if(++d->blocked > d->wait){
+			free(d->path);
+			d->path = nil;
+			d->npath = 0;
+			return -1;
+		}
+		return 0;
 	}
 
 	d->blocked = 0;
 	d->next++;
 
 	maction(m, MMOVE, p);
+	return 0;
+}
+
+static void
+walktoexec(AIState *a)
+{
+	Monster *m;
+	m = a->m;
+
+	if(walktoinner(a) < 0){
+		a = mpopstate(m);
+		freestate(a);
+		return;
+	}
 }
 
 static void
@@ -278,6 +258,80 @@ walkto(Monster *m, Point p, int wait)
 	d->wait = wait;
 	assert(d != nil);
 	i = mkstate("walk", m, d, nil, walktoexec, walktoexit);
+	return i;
+}
+
+typedef struct attackdata attackdata;
+struct attackdata
+{
+	Monster *mt;
+	Point last;
+	AIState *w;
+	walktodata *wd;
+};
+
+static void
+attackenter(AIState *a)
+{
+	attackdata *d;
+	d = a->aux;
+	if(d->w->enter != nil)
+		d->w->enter(d->w);
+}
+
+static void
+attackexec(AIState *a)
+{
+	int n;
+	attackdata *d;
+	Monster *m, *mt;
+	m = a->m;
+	d = a->aux;
+	mt = d->mt;
+
+	n = manhattan(m->pt, mt->pt);
+	if(mt->flags & Mdead || n > ORTHOCOST*5 ){
+		/* stop the chase */
+		a = mpopstate(m);
+		freestate(a);
+		return;
+	} else if(n > ORTHOCOST){
+		/* walk to target */
+		if(!eqpt(mt->pt, d->last)){
+			d->wd->dst = mt->pt;
+		}
+		walktoinner(d->w);
+		d->last = mt->pt;
+	} else {
+		/* attack! */
+		maction(m, MMOVE, mt->pt);
+	}
+}
+
+static void
+attackexit(AIState *a)
+{
+	attackdata *d;
+	d = a->aux;
+
+	if(d->w->exit != nil)
+		d->w->exit(d->w);
+	freestate(d->w);
+	mfree(d->mt);
+	free(d);
+}
+
+AIState*
+attack(Monster *m, Monster *targ)
+{
+	attackdata *d;
+	AIState *i;
+	d = mallocz(sizeof(*d), 1);
+	incref(targ);
+	d->mt = targ;
+	d->wd = mallocz(sizeof(walktodata), 1);
+	d->w = mkstate("chase", m, d->wd, nil, nil, walktoexit);
+	i = mkstate("attack", m, d, attackenter, attackexec, attackexit);
 	return i;
 }
 

@@ -33,8 +33,8 @@ AIState *mkstate(char *name, Monster *m, void *aux, AIFun enter, AIFun exec, AIF
 void freestate(AIState *a);
 void idle(Monster *m);
 AIState* wander(Monster *m);
-AIState* attack(Monster *m, Monster *targ);
 AIState* walkto(Monster *m, Point p, int wait);
+AIState* attack(Monster *m, Monster *targ);
 
 struct Tileset
 {

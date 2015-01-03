@@ -45,7 +45,8 @@ mfree(Monster *m)
 		return;
 
 	if(m->aglobal != nil){
-		m->aglobal->exit(m->aglobal);
+		if(m->aglobal->exit != nil)
+			m->aglobal->exit(m->aglobal);
 		freestate(m->aglobal);
 	}
 	if(m->ai != nil){
@@ -63,7 +64,8 @@ mupdate(Monster *m)
 		m->aglobal->exec(m->aglobal);
 	if(m->ai != nil){
 		dbg("the %s is %sing...", m->md->name, m->ai->name);
-		m->ai->exec(m->ai);
+		if(m->ai->exec != nil)
+			m->ai->exec(m->ai);
 	}
 
 	return 0;
@@ -75,6 +77,7 @@ mpushstate(Monster *m, AIState *a)
 	assert(a != nil);
 	a->prev = m->ai;
 	m->ai = a;
+	dbg("the %s is now %sing...", m->md->name, a->name);
 	if(a->enter != nil)
 		a->enter(a);
 }
@@ -88,6 +91,7 @@ mpopstate(Monster *m)
 		return nil;
 
 	a = m->ai;
+	dbg("the %s stops %sing!", m->md->name, a->name);
 	if(a->exit != nil)
 		a->exit(a);
 	m->ai = a->prev;

@@ -69,7 +69,7 @@ initui(char *name)
 	if((ui.kc = initkeyboard(nil)) == nil)
 		sysfatal("initkeyboard: %r");
 
-	if((ui.msgc = chancreate(sizeof(Msg*), debug?10000:100)) == nil)
+	if((ui.msgc = chancreate(sizeof(Msg*), debug>0?1000:100)) == nil)
 		sysfatal("chancreate: %r");
 
 	tileset = getenv("tileset");
@@ -514,7 +514,8 @@ threadmain(int argc, char *argv[])
 			}
 
 			turn++;
-			movemons();
+			if(turn % 2 == 0)
+				movemons();
 
 			if(player->flags & Mdead){
 				bad("you died!");
