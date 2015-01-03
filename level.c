@@ -158,19 +158,22 @@ gen(Level *l, int type)
 
 	space = 0;
 
-	do {
-		pup = (Point){nrand(l->width), nrand(l->height)};
-	} while(!ptinrect(pup, insetrect(l->r, 3)));
-	t = tileat(l, pup);
-	t->feat = TUPSTAIR;
-	t->portal = mallocz(sizeof(Portal), 1);
-	setflagat(l, pup, Fhasfeature|Fportal);
-	l->up = pup;
+	pup = ZP;
+	pdown = ZP;
 
 	while(1){
+		if(!eqpt(pup,ZP))
+			flagat(l, pup) = 0;
 		do {
-			pdown = (Point){nrand(l->width-5)+3, nrand(l->height-5)+3};
+			pup = (Point){nrand(l->width), nrand(l->height)};
+		} while(!ptinrect(pup, insetrect(l->r, 3)));
+
+		if(!eqpt(pdown, ZP))
+			flagat(l, pup) = 0;
+		do {
+			pdown = (Point){nrand(l->width), nrand(l->height)};
 		} while(!ptinrect(pdown, insetrect(l->r, 3)));
+
 		/* already upstair? */
 		if(flagat(l, pdown) & Fportal)
 			continue;
@@ -181,6 +184,13 @@ gen(Level *l, int type)
 		free(path);
 		if(npath < sqrt(l->width * l->height)-4)
 			continue;
+
+		setflagat(l, pup, Fhasfeature|Fportal);
+		t = tileat(l, pup);
+		t->feat = TUPSTAIR;
+		t->portal = mallocz(sizeof(Portal), 1);
+		l->up = pup;
+
 		setflagat(l, pdown, Fhasfeature|Fportal);
 		t = tileat(l, pdown);
 		t->feat = TDOWNSTAIR;
