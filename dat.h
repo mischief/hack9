@@ -11,19 +11,29 @@ typedef struct Camera Camera;
 void msg(char *fmt, ...);
 void good(char *fmt, ...);
 void warn(char *fmt, ...);
+void bad(char *fmt, ...);
 void dbg(char *fmt, ...);
+
+typedef void (*AIFun)(AIState *);
 
 struct AIState
 {
 	AIState *prev;
+	char name[16];
+	Monster *m;
 	void *aux;
-	void (*enter)(Monster *);
-	void (*exec)(Monster *);
-	void (*exit)(Monster *);
+	AIFun enter;
+	AIFun exec;
+	AIFun exit;
 };
 
 /* ai.c */
-void idlestate(Monster *m);
+AIState *mkstate(char *name, Monster *m, void *aux, AIFun enter, AIFun exec, AIFun exit);
+void freestate(AIState *a);
+void idle(Monster *m);
+AIState* wander(Monster *m);
+AIState* attack(Monster *m, Monster *targ);
+AIState* walkto(Monster *m, Point p, int wait);
 
 struct Tileset
 {
@@ -49,6 +59,7 @@ void drawtile(Tileset *t, Image *dst, Point p, int i);
 struct MonsterData
 {
 	char *name;
+	char align;
 	uint maxhp;
 	uint def;
 	uint atk;
@@ -65,8 +76,16 @@ enum
 	MUSE,
 };
 
+/* monster flags */
+enum
+{
+	Mdead	= 0x1,
+};
+
 struct Monster
 {
+	Ref;
+
 	/* current level */
 	Level *l;
 	/* location */
@@ -78,6 +97,12 @@ struct Monster
 	/* current hp */
 	long hp;
 
+	/* armor class */
+	long ac;
+
+	/* flags */
+	u32int flags;
+
 	/* ai state */
 	AIState *ai;
 	AIState *aglobal;
@@ -87,9 +112,10 @@ struct Monster
 };
 
 Monster *monst(int idx);
+void mfree(Monster *m);
 int mupdate(Monster *m);
 void mpushstate(Monster *m, AIState *a);
-void mpopstate(Monster *m);
+AIState *mpopstate(Monster *m);
 int maction(Monster *m, int what, Point where);
 
 /* well known tiles, also indexes into monstdata */

@@ -13,6 +13,7 @@ enum
 	LSIZE	= 20,
 };
 
+static int debug;
 static long turn = 0;
 static Level *level;
 static char *user;
@@ -26,6 +27,7 @@ enum
 	CORANGE,
 	CRED,
 	CGREY,
+	CMAGENTA,
 };
 
 typedef struct Msg Msg;
@@ -77,6 +79,7 @@ initui(char *name)
 	ui.cols[CORANGE] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xFFA500FF);
 	ui.cols[CRED] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DRed);
 	ui.cols[CGREY] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xAAAAAAFF);
+	ui.cols[CMAGENTA] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DMagenta);
 }
 
 static void
@@ -121,11 +124,23 @@ warn(char *fmt, ...)
 }
 
 void
-dbg(char *fmt, ...)
+bad(char *fmt, ...)
 {
 	va_list arg;
 	va_start(arg, fmt);
 	uimsg(CRED, fmt, arg);
+	va_end(arg);
+}
+
+void
+dbg(char *fmt, ...)
+{
+	va_list arg;
+
+	if(debug < 1)
+		return;
+	va_start(arg, fmt);
+	uimsg(CMAGENTA, fmt, arg);
 	va_end(arg);
 }
 
@@ -167,11 +182,13 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 void
 drawui(Rectangle r)
 {
-	int i, j, logline;
+	int i, j, logline, sw;
 	Point p;
 	Image *c;
 	char buf[256];
 	Msg *m;
+
+	sw = stringwidth(font, " ");
 
 	draw(screen, r, display->black, nil, ZP);
 
@@ -192,19 +209,16 @@ drawui(Rectangle r)
 	p.y += logline;
 	line(screen, p, Pt(screen->r.max.x, p.y), Enddisc, Enddisc, 0, display->white, ZP);
 
-	if(gameover>0)
-		return;
-
 	snprint(buf, sizeof(buf), "%s the %s", user, player->md->name);
 	p = string(screen, p, display->white, ZP, font, buf);
-	p.x += 10;
 
 	p.x = r.min.x;
 	p.y += font->height;
-	snprint(buf, sizeof(buf), "T:%ld ", turn);
+	snprint(buf, sizeof(buf), "T:%ld", turn);
 	p = string(screen, p, display->white, ZP, font, buf);
+	p.x += sw;
 
-	snprint(buf, sizeof(buf), "%ld/%d HP ", player->hp, player->md->maxhp);
+	snprint(buf, sizeof(buf), "%ld/%d HP", player->hp, player->md->maxhp);
 	i = player->hp, j = player->md->maxhp;
 	if(i > (j/4)*3)
 		c = ui.cols[CGREEN];
@@ -215,6 +229,16 @@ drawui(Rectangle r)
 	else
 		c = ui.cols[CRED];
 	p = string(screen, p, c, ZP, font, buf);
+	p.x += sw;
+
+	snprint(buf, sizeof(buf), "%ld AC", player->ac);
+	p = string(screen, p, display->white, ZP, font, buf);
+	p.x += sw;
+
+	if(player->flags & Mdead){
+		p = stringbg(screen, p, display->black, ZP, font, "dead", ui.cols[CRED], ZP);
+		p.x += sw;
+	}
 }
 
 Rectangle
@@ -251,14 +275,12 @@ redraw(UI *ui, int new)
 
 	ui->uir = Rpt(Pt(screen->r.min.x, screen->r.max.y-(font->height*uisz)), screen->r.max);
 
-	if(gameover<1){
-		width = Dx(screen->r) / ui->tiles->width;
-		height = (Dy(screen->r) - (font->height*2)) / ui->tiles->height;
-		ui->viewr = view(player->pt, level, width, height);
-		ui->camp = subpt(Pt(width/2, height/2), player->pt);
-		draw(screen, screen->r, display->black, nil, ZP);
-		drawlevel(level, ui->tiles, ui->viewr);
-	}
+	width = Dx(screen->r) / ui->tiles->width;
+	height = (Dy(screen->r) - (font->height*2)) / ui->tiles->height;
+	ui->viewr = view(player->pt, level, width, height);
+	ui->camp = subpt(Pt(width/2, height/2), player->pt);
+	draw(screen, screen->r, display->black, nil, ZP);
+	drawlevel(level, ui->tiles, ui->viewr);
 	drawui(ui->uir);
 	flushimage(display, 1);
 }
@@ -266,8 +288,8 @@ redraw(UI *ui, int new)
 void
 movemons(void)
 {
-	int i, nmove, npath;
-	Point p, p2, *tomove, *path;
+	int i, nmove;
+	Point p, *tomove;
 	Monster *m;
 
 	nmove = 0;
@@ -298,22 +320,6 @@ movemons(void)
 		if(m == nil)
 			continue;
 		mupdate(m);
-		continue;
-
-		if(manhattan(p, player->pt) < 6 * ORTHOCOST){
-			/* move the monster toward player */
-			npath = pathfind(level, m->pt, player->pt, &path);
-			if(npath >= 0){
-				/* step once along path, path[0] is cur pos */
-				maction(m, MMOVE, path[1]);
-				free(path);
-			}
-		} else {
-			/* random move */
-			p2 = addpt(m->pt, cardinals[nrand(NCARDINAL)]);
-			if(!hasflagat(level, p2, Fblocked))
-				maction(m, MMOVE, p2);
-		}
 	}
 
 	free(tomove);
@@ -330,9 +336,12 @@ threadmain(int argc, char *argv[])
 	Tile *t;
 
 	ARGBEGIN{
+	case 'd':
+		debug++;
+		break;
 	}ARGEND
 
-	mainmem->flags = POOL_PARANOIA;
+	//mainmem->flags = POOL_PARANOIA;
 
 	srand(truerand());
 
@@ -376,17 +385,12 @@ threadmain(int argc, char *argv[])
 			if(c == Kdel)
 				threadexitsall(nil);
 			if(gameover > 0){
-				dbg("you are dead. game over, man.");
+				bad("you are dead. game over, man.");
 				break;
 			}
 
 			move = MNONE;
 			dir = NODIR;
-
-			if(turn % 5 == 0 && player->hp < player->md->maxhp){
-				good("you get 1 hp.");
-				player->hp++;
-			}
 
 			switch(c){
 			case Kdel:
@@ -425,17 +429,21 @@ threadmain(int argc, char *argv[])
 				continue;
 			}
 
+			if(turn % 5 == 0 && player->hp < player->md->maxhp){
+				good("you get 1 hp.");
+				player->hp++;
+			}
+
 			if(move != MNONE && dir != NODIR){
 				if(maction(player, move, addpt(player->pt, cardinals[dir])) < 0)
 					msg("ouch!");
 			}
 
 			turn++;
-			if(turn % 2 ==0){
-				movemons();
-			}
+			movemons();
 
-			if(player->hp < 2){
+			if(player->flags & Mdead){
+				bad("you died!");
 				gameover++;
 			}
 
@@ -450,7 +458,7 @@ threadmain(int argc, char *argv[])
 				ui.msg = l;
 				ui.nmsg++;
 				if(ui.nmsg > 10){
-					for(lp = ui.msg; lp->next != nil; lp = lp->next)
+					for(lp = ui.msg; lp->next->next != nil; lp = lp->next)
 						;
 					free(lp->next);
 					lp->next = nil;

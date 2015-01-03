@@ -1,6 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
+#include <thread.h>
 
 #include "dat.h"
 
@@ -23,6 +24,10 @@ monst(int idx)
 
 	m->md = md;
 	m->hp = md->maxhp;
+	m->ac = md->def;
+	m->align = md->align;
+
+	incref(m);
 
 	return m;
 
@@ -31,13 +36,35 @@ missing:
 	return nil;
 }
 
+void
+mfree(Monster *m)
+{
+	AIState *a;
+
+	if(decref(m) != 0)
+		return;
+
+	if(m->aglobal != nil){
+		m->aglobal->exit(m->aglobal);
+		freestate(m->aglobal);
+	}
+	if(m->ai != nil){
+		while((a = mpopstate(m)) != nil)
+			freestate(a);
+	}
+
+	free(m);
+}
+
 int
 mupdate(Monster *m)
 {
 	if(m->aglobal != nil)
-		m->aglobal->exec(m);
-	if(m->ai != nil)
-		m->ai->exec(m);
+		m->aglobal->exec(m->aglobal);
+	if(m->ai != nil){
+		dbg("the %s is %sing...", m->md->name, m->ai->name);
+		m->ai->exec(m->ai);
+	}
 
 	return 0;
 }
@@ -49,27 +76,51 @@ mpushstate(Monster *m, AIState *a)
 	a->prev = m->ai;
 	m->ai = a;
 	if(a->enter != nil)
-		a->enter(m);
+		a->enter(a);
 }
 
-void
+AIState*
 mpopstate(Monster *m)
 {
 	AIState *a;
 
+	if(m->ai == nil)
+		return nil;
+
 	a = m->ai;
-	m->ai = a->prev;
-	assert(m->ai != nil);
 	if(a->exit != nil)
-		a->exit(m);
+		a->exit(a);
+	m->ai = a->prev;
+
+	return a;
+}
+
+static int
+mattack(Monster *m, Monster *mt)
+{
+	int hit, dmg;
+	hit = roll(1, 20);
+	if(hit > 10+mt->ac){
+		warn("the %s misses!", m->md->name);
+		return 0;
+	}
+
+	dmg = 1+roll(m->md->atk, m->md->rolls);
+	warn("the %s hits for %d!", m->md->name, dmg);
+	mt->hp -= dmg;
+	if(mt->hp < 1){
+		mt->flags = Mdead;
+		bad("the %s is killed!", mt->md->name);
+		return 1;
+	}
+
+	return 0;
 }
 
 int
 maction(Monster *m, int what, Point where)
 {
-	int dmg;
 	Tile *cur, *targ;
-	Monster *mtarg;
 
 	switch(what){
 	default:
@@ -82,26 +133,14 @@ maction(Monster *m, int what, Point where)
 		targ = tileat(m->l, where);
 		if(hasflagat(m->l, where, Fhasmonster) && targ->monst != nil){
 			/* monster; attack it */
-			mtarg = targ->monst;
-			dmg = roll(m->md->atk, m->md->rolls) - mtarg->md->def;
-			if(dmg <= 0)
-				warn("the %s misses!", m->md->name);
-			else {
-				warn("the %s hits for %d!", m->md->name, dmg);
-				mtarg->hp -= dmg;
-				if(mtarg->hp < 1){
-					dbg("the %s is killed!", mtarg->md->name);
-					clrflagat(m->l, where, Fhasmonster|Fblocked);
-					free(mtarg);
-					targ->monst = nil;
-					targ->unit = 0;
-				}
+			if(mattack(m, targ->monst) > 0){
+				clrflagat(m->l, where, Fhasmonster|Fblocked);
+				mfree(targ->monst);
+				targ->monst = nil;
+				targ->unit = 0;
 			}
-
-			/* no movement */
 			return 0;
-		}
-		if(!hasflagat(m->l, where, Fblocked)){
+		} else if(!hasflagat(m->l, where, Fblocked)){
 			/* move */
 			cur = tileat(m->l, m->pt);
 			setflagat(m->l, where, (Fhasmonster|Fblocked));

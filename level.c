@@ -1,6 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
+#include <thread.h>
 
 #include "dat.h"
 
@@ -125,9 +126,8 @@ gen(Level *l)
 	space += drunken(l, TTREE);
 
 	/* some monsters */
-	//q = (l->width*l->height) / 40;
-	q = (l->width*l->height) / 20;
-	q += 2;
+	q = (l->width*l->height) / 40;
+	q += 1;
 	rnd = nrand(q)+q;
 	for(i = 0; i < rnd && space > 10; i++){
 		do {
@@ -144,7 +144,7 @@ gen(Level *l)
 		setflagat(l, p, Fblocked|Fhasmonster);
 
 		/* setup ai state */
-		idlestate(m);
+		idle(m);
 
 		space--;
 	}
@@ -203,7 +203,7 @@ freelevel(Level *l)
 		for(y = 0; y < l->height; y++){
 			p = (Point){x, y};
 			if(hasflagat(l, p, Fhasmonster))
-				free(tileat(l, Pt(x, y))->monst);
+				mfree(tileat(l, Pt(x, y))->monst);
 		}
 	}
 
