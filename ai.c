@@ -76,8 +76,8 @@ idleexec(AIState *a)
 	/* find something to attack */
 	r = 4;
 	c = m->pt;
-	for(p.x = c.x - r; p.x <= c.x; p.x++){
-		for(p.y = c.y - r; p.y <= c.y; p.y++){
+	for(p.x = c.x; p.x >= c.x - r; p.x--){
+		for(p.y = c.y; p.y >= c.y - r; p.y--){
 			if(eqpt(p, c))
 				continue;
 			xd = p.x - c.x;
