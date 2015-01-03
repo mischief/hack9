@@ -156,6 +156,8 @@ gen(Level *l, int type)
 	Point pup, pdown, p, *path;
 	Tile *t;
 
+	space = 0;
+
 	do {
 		pup = (Point){nrand(l->width), nrand(l->height)};
 	} while(!ptinrect(pup, insetrect(l->r, 3)));
