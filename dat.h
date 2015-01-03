@@ -8,6 +8,7 @@ typedef struct Monster Monster;
 typedef struct Camera Camera;
 
 /* hack9.c */
+extern int debug;
 void msg(char *fmt, ...);
 void good(char *fmt, ...);
 void warn(char *fmt, ...);
@@ -66,7 +67,7 @@ struct MonsterData
 	uint rolls;
 };
 
-extern MonsterData monstdata[392];
+extern MonsterData monstdata[1200];
 
 /* possible moves */
 enum
@@ -74,6 +75,7 @@ enum
 	MNONE,
 	MMOVE,	/* also attack */
 	MUSE,
+	MSPECIAL,
 };
 
 /* monster flags */
@@ -127,6 +129,7 @@ enum
 	/* monsters */
 	TLARGECAT	= 39,
 	TGWIZARD	= 168,
+	TLICH		= 185,
 	TSOLDIER	= 280,
 	TSERGEANT	= 281,
 	TLIEUTENANT	= 282,
@@ -201,7 +204,7 @@ struct Level
 	Point down;
 };
 
-Level *genlevel(int width, int height);
+Level *genlevel(int width, int height, int type);
 void freelevel(Level *l);
 Tile *tileat(Level *l, Point p);
 #define flagat(l, p) (*(l->flags+(p.y*l->width)+p.x))
@@ -228,7 +231,7 @@ enum {
 
 /* path.c */
 int manhattan(Point cur, Point targ);
-int pathfind(Level *l, Point start, Point end, Point **path);
+int pathfind(Level *l, Point start, Point end, Point **path, int not);
 
 /* util.c */
 enum

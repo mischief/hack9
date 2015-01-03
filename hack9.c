@@ -4,7 +4,6 @@
 #include <draw.h>
 #include <keyboard.h>
 #include <mouse.h>
-#include <pool.h>
 
 #include "dat.h"
 
@@ -13,9 +12,11 @@ enum
 	LSIZE	= 20,
 };
 
-static int debug;
+int debug;
+static int uisz = 6;
 static long turn = 0;
 static char *user;
+static char *home;
 static Monster *player;
 static int gameover = 0;
 
@@ -55,6 +56,9 @@ struct UI
 static void
 initui(char *name)
 {
+	char buf[1024];
+	char *tileset;
+
 	if(initdraw(nil, nil, name) < 0)
 		sysfatal("initdraw: %r");
 
@@ -64,10 +68,16 @@ initui(char *name)
 	if((ui.kc = initkeyboard(nil)) == nil)
 		sysfatal("initkeyboard: %r");
 
-	if((ui.msgc = chancreate(sizeof(Msg*), debug?1000:100)) == nil)
+	if((ui.msgc = chancreate(sizeof(Msg*), debug?10000:100)) == nil)
 		sysfatal("chancreate: %r");
 
+	tileset = getenv("tileset");
+	if(tileset == nil)
+		tileset = strdup("nethack.32x32");
+
+	snprint(buf, sizeof(buf), "%s/lib/%s", home, tileset);
 	if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil)
+		if((ui.tiles = opentile(buf, 32, 32)) == nil)
 		sysfatal("opentile: %r");
 
 	if((ui.cols = mallocz(5 * sizeof(Image*), 1)) == nil)
@@ -210,6 +220,10 @@ drawui(Rectangle r)
 
 	snprint(buf, sizeof(buf), "%s the %s", user, player->md->name);
 	p = string(screen, p, display->white, ZP, font, buf);
+	p.x += sw*2;
+
+	snprint(buf, sizeof(buf), "%ld kills", player->kills);
+	p = string(screen, p, display->white, ZP, font, buf);
 
 	p.x = r.min.x;
 	p.y += font->height;
@@ -256,9 +270,7 @@ view(Point pos, Level *l, int scrwidth, int scrheight)
 void
 redraw(UI *ui, int new, int justui)
 {
-	int width, height, uisz;
-
-	uisz = 7;
+	int width, height;
 
 	if(new){
 		if(getwindow(display, Refnone) < 0)
@@ -276,8 +288,8 @@ redraw(UI *ui, int new, int justui)
 
 	if(!justui){
 		width = Dx(screen->r) / ui->tiles->width;
-		height = (Dy(screen->r) - (font->height*2)) / ui->tiles->height;
-		ui->viewr = view(player->pt, player->l, width, height);
+		height = (Dy(screen->r) - (font->height*uisz)) / ui->tiles->height;
+		ui->viewr = view(player->pt, player->l, width, height+1);
 		ui->camp = subpt(Pt(width/2, height/2), player->pt);
 		draw(screen, screen->r, display->black, nil, ZP);
 		drawlevel(player->l, ui->tiles, ui->viewr);
@@ -341,19 +353,27 @@ threadmain(int argc, char *argv[])
 	case 'd':
 		debug++;
 		break;
+	case 'u':
+		uisz = atoi(EARGF(exits(nil)));
+		if(uisz < 3)
+			sysfatal("ui too small");
 	}ARGEND
-
-	//mainmem->flags = POOL_PARANOIA;
 
 	srand(truerand());
 
 	user = getenv("user");
+	home = getenv("home");
 
 	initui(argv0);
 
 	/* initial level */
-	if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE)) == nil)
-		sysfatal("genlevel: %r");
+	if(debug > 0){
+		if((level = genlevel(11, 11, 0)) == nil)
+			sysfatal("genlevel: %r");
+	} else {
+		if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE, nrand(3)+1)) == nil)
+			sysfatal("genlevel: %r");
+	}
 
 	/* the player */
 	player = monst(TWIZARD);
@@ -365,6 +385,11 @@ threadmain(int argc, char *argv[])
 	t->unit = TWIZARD;
 	t->monst = player;
 	setflagat(level, player->pt, Fhasmonster|Fblocked);
+
+	if(debug > 0){
+		player->hp = 1000;
+		player->md->maxhp = 1000;
+	}
 
 	redraw(&ui, 0, 0);
 
@@ -423,13 +448,48 @@ threadmain(int argc, char *argv[])
 			case '>':
 				move = MUSE;
 				break;
+			case 's':
+				/* special */
+				move = MSPECIAL;
+				c = recvul(ui.kc->c);
+				switch(c){
+				case 'h':
+				case Kleft:
+					dir = WEST;
+					break;
+				case 'j':
+				case Kdown:
+					dir = SOUTH;
+					break;
+				case 'k':
+				case Kup:
+					dir = NORTH;
+					break;
+				case 'l':
+				case Kright:
+					dir = EAST;
+					break;
+				default:
+					break;
+				}
+				if(dir == NODIR){
+					msg("bad direction for special");
+					continue;
+				}
 			case '.':
 				break;
+			case '+':
+				uisz+=2;
+				goto redrw;
+			case '-':
+				if(uisz > 5)
+					uisz-=2;
+				goto redrw;
 			case ' ':
 				msg("");
 			default:
 				/* don't waste a move */
-				continue;
+				goto redrw;
 			}
 
 			if(turn % 5 == 0 && player->hp < player->md->maxhp){
@@ -450,6 +510,7 @@ threadmain(int argc, char *argv[])
 				gameover++;
 			}
 
+redrw:
 			redraw(&ui, 0, 0);
 			break;
 		case ALOG:
@@ -460,7 +521,7 @@ threadmain(int argc, char *argv[])
 				l->next = ui.msg;
 				ui.msg = l;
 				ui.nmsg++;
-				if(ui.nmsg > 10){
+				if(ui.nmsg > 100){
 					for(lp = ui.msg; lp->next->next != nil; lp = lp->next)
 						;
 					free(lp->next);

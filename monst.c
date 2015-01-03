@@ -101,11 +101,11 @@ mattack(Monster *m, Monster *mt)
 	int hit, crit, dmg;
 	hit = roll(1, 100);
 	if(hit < 10+abs(mt->ac-10)*2){
-		warn("the %s misses!", m->md->name);
+		warn("the %s misses the %s!", m->md->name, mt->md->name);
 		return 0;
 	}
 
-	dmg = 1+roll(m->md->atk, m->md->rolls);
+	dmg = roll(m->md->atk, m->md->rolls);
 
 	if(dmg && mt->ac < 0){
 		dmg -= 1+nrand(-mt->ac);
@@ -116,15 +116,16 @@ mattack(Monster *m, Monster *mt)
 	crit = roll(1, 5);
 	if(crit == 1){
 		dmg *= 2;
-		warn("the %s critically strikes for %d!", m->md->name, dmg);
+		warn("the %s critically strikes the %s for %d!", m->md->name, mt->md->name, dmg);
 	} else {
-		warn("the %s hits for %d!", m->md->name, dmg);
+		warn("the %s hits the %s for %d!", m->md->name, mt->md->name, dmg);
 	}
 
 	mt->hp -= dmg;
 
 	if(mt->hp < 1){
 		mt->flags = Mdead;
+		m->kills++;
 		bad("the %s is killed!", mt->md->name);
 		return 1;
 	}
@@ -178,7 +179,7 @@ maction(Monster *m, int what, Point where)
 			m = cur->monst;
 			cur->monst = nil;
 			if(cur->portal->to == nil){
-				if((cur->portal->to = genlevel(nrand(20)+20, nrand(20)+20)) == nil)
+				if((cur->portal->to = genlevel(nrand(20)+20, nrand(20)+20, nrand(3)+1)) == nil)
 					sysfatal("genlevel: %r");
 
 				cur->portal->pt = cur->portal->to->up;
@@ -197,6 +198,8 @@ maction(Monster *m, int what, Point where)
 			setflagat(cur->portal->to, cur->portal->pt, Fhasmonster|Fblocked);
 			return 1;
 		}
+		break;
+	case MSPECIAL:
 		break;
 	}
 

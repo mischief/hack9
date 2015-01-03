@@ -41,7 +41,7 @@ pnodecmp(void *a, void *b)
 }
 
 int
-pathfind(Level *l, Point start, Point end, Point **path)
+pathfind(Level *l, Point start, Point end, Point **path, int not)
 {
 	int i, nneigh, npath;
 	Point *neighborp, pt;
@@ -50,6 +50,7 @@ pathfind(Level *l, Point start, Point end, Point **path)
 
 	npath = -1;
 
+	//dbg("pathfind %P → %P not %06b", start, end, not);
 	if(eqpt(start, end))
 		return npath;
 
@@ -72,10 +73,10 @@ pathfind(Level *l, Point start, Point end, Point **path)
 			break;
 
 		neighborp = lneighbor(l, p->pt, &nneigh);
-
 		for(i = 0; i < nneigh; i++){
 			pt = neighborp[i];
 			neighbor = &nodes[pt.y*l->width + pt.x];
+			if(eqpt(pt, end) || (flagat(l, pt) & not) != not)
 			if(!neighbor->closed){
 				if(!priqhas(q, neighbor)){
 					neighbor->pt = pt;
@@ -95,8 +96,10 @@ pathfind(Level *l, Point start, Point end, Point **path)
 
 	p = &nodes[end.y*l->width + end.x];
 
-	if(p->parent == nil)
+	if(p->parent == nil){
+		werrstr("no path");
 		goto fail2;
+	}
 
 	/* reverse; ugh */
 	i = 0;

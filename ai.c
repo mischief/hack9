@@ -123,19 +123,24 @@ idle(Monster *m)
 static void
 wanderexec(AIState *a)
 {
+	int try;
 	Point p;
 	Monster *m;
 	AIState *ai;
 	m = a->m;
 
 	if(a->aux != nil){
+leave:
 		ai = mpopstate(m);
 		freestate(ai);
 		return;
 	}
 
+	try = 0;
 	do {
 		p = addpt(m->pt, Pt(nrand(IDLERADIUS*2+1)-IDLERADIUS, nrand(IDLERADIUS*2+1)-IDLERADIUS));
+		if(try++ > 10)
+			goto leave;
 	} while(!ptinrect(p, m->l->r) ||  hasflagat(m->l, p, Fblocked) || manhattan(m->pt, p) < ORTHOCOST*2);
 
 	mpushstate(m, walkto(m, p, 5));
@@ -213,6 +218,7 @@ struct walktodata
 static void
 walktoexec(AIState *a)
 {
+	int dist;
 	walktodata *d;
 	Monster *m;
 	Point p;
@@ -221,13 +227,15 @@ walktoexec(AIState *a)
 	m = a->m;
 
 	if(d->path == nil){
-		d->npath = pathfind(m->l, m->pt, d->dst, &d->path);
+		d->npath = pathfind(m->l, m->pt, d->dst, &d->path, Fblocked);
 		d->next = 1;
 		d->blocked = 0;
 	}
 
+	dist = manhattan(m->pt, d->dst);
 	/* reached end */
-	if(manhattan(m->pt, d->dst) == ORTHOCOST || d->path == nil || d->next == d->npath){
+	dbg("dist = %d path %#p %d/%d", dist, d->path, d->next, d->npath);
+	if(dist == ORTHOCOST || d->path == nil || d->next == d->npath){
 leave:
 		a = mpopstate(m);
 		freestate(a);
@@ -235,7 +243,8 @@ leave:
 	}
 
 	p = d->path[d->next];
-	
+	dbg("next %P %06b", p, flagat(m->l, p));
+
 	/* if the next move is blocked */
 	if(hasflagat(m->l, p, Fblocked)){
 		if(++d->blocked > d->wait)

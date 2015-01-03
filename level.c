@@ -12,15 +12,19 @@ clear(Level *l, Point p, int dist)
 	Point p2;
 	Tile *t;
 
-	r = Rect(p.x-dist, p.y-dist, p.x+dist+1, p.y+dist+1);
+	r = Rect(p.x-dist, p.y-dist, p.x+dist, p.y+dist);
 	rectclip(&r, l->r);
 
-	for(p2.x = r.min.x; p2.x < r.max.x; p2.x++){
-		for(p2.y = r.min.y; p2.y < r.max.y; p2.y++){
+	for(p2.x = r.min.x; p2.x <= r.max.x; p2.x++){
+		for(p2.y = r.min.y; p2.y <= r.max.y; p2.y++){
 			if(eqpt(p, p2))
 				continue;
 			t = tileat(l, p2);
 			t->unit = t->feat = 0;
+			if(t->monst){
+				mfree(t->monst);
+				t->monst = nil;
+			}
 			flagat(l, p2) = 0;
 		}
 	}
@@ -82,7 +86,7 @@ redo:
 	drunk1(l, l->down, cnt/2, s2);
 
 	/* check reachability */
-	npath = pathfind(l, l->up, l->down, &path);
+	npath = pathfind(l, l->up, l->down, &path, Fblocked);
 	if(npath < 0)
 		goto redo;
 	else
@@ -91,29 +95,57 @@ redo:
 	return cnt * 2;
 }
 
+static Monster*
+mkmons(Level *l, Point p, int type)
+{
+	Monster *m;
+	m = monst(type);
+	m->l = l;
+	m->pt = p;
+	/* setup ai state */
+	idle(m);
+	return m;
+}
+
 static void
 genmonsters(Level *l, int type, int count)
 {
 	int i;
 	Point p;
 	Tile *t;
-	Monster *m;
 
 	for(i = 0; i < count; i++){
 		do {
 			p = (Point){nrand(l->width), nrand(l->height)};
-		} while(hasflagat(l, p, Fblocked|Fhasfeature));
+		} while(hasflagat(l, p, Fhasmonster|Fhasfeature|Fblocked));
 
 		t = tileat(l, p);
 		t->unit = type;
-		m = monst(type);
-		m->l = l;
-		m->pt = p;
-		t->monst = m;
+		t->monst = mkmons(l, p, type);
 		setflagat(l, p, Fblocked|Fhasmonster);
+	}
+}
 
-		/* setup ai state */
-		idle(m);
+static void
+several(Level *l, Point *p, int count, int type, int level)
+{
+	int i, j, n;
+	Point *neigh;
+	Tile *t;
+	for(i = 0; i < count; i++){
+		if(!hasflagat(l, p[i], Fblocked)){
+			t = tileat(l, p[i]);
+			t->unit = type;
+			t->monst = mkmons(l, p[i], type);
+			setflagat(l, p[i], Fblocked|Fhasmonster);
+		}
+		if(level > 0){
+			neigh = lneighbor(l, p[i], &n);
+			for(j = 0; j < n; j++){
+				several(l, neigh, n, type, level-1);
+			}
+			free(neigh);
+		}
 	}
 }
 
@@ -124,7 +156,9 @@ gen(Level *l, int type)
 	Point pup, pdown, p, *path;
 	Tile *t;
 
-	pup = (Point){nrand(l->width-4)+2, nrand(l->height-4)+2};
+	do {
+		pup = (Point){nrand(l->width), nrand(l->height)};
+	} while(!ptinrect(pup, insetrect(l->r, 3)));
 	t = tileat(l, pup);
 	t->feat = TUPSTAIR;
 	t->portal = mallocz(sizeof(Portal), 1);
@@ -132,13 +166,15 @@ gen(Level *l, int type)
 	l->up = pup;
 
 	while(1){
-		pdown = (Point){nrand(l->width-4)+2, nrand(l->height-4)+2};
+		do {
+			pdown = (Point){nrand(l->width-5)+3, nrand(l->height-5)+3};
+		} while(!ptinrect(pdown, insetrect(l->r, 3)));
 		/* already upstair? */
 		if(flagat(l, pdown) & Fportal)
 			continue;
 		/* too close? */
 		p = subpt(pup, pdown);
-		if((npath = pathfind(l, pup, pdown, &path)) < 0)
+		if((npath = pathfind(l, pup, pdown, &path, Fblocked)) < 0)
 			sysfatal("pathfind: %r");
 		free(path);
 		if(npath < sqrt(l->width * l->height)-4)
@@ -151,36 +187,58 @@ gen(Level *l, int type)
 		break;
 	}
 
-	space = 0;
-
 	switch(type){
-		case 0:
-			space += drunken(l, TTREE, 3, 4, 10);
-			genmonsters(l, TGWIZARD, space/48);
-			genmonsters(l, TSOLDIER, space/64);
-			genmonsters(l, TSERGEANT, space/128);
-			genmonsters(l, TLIEUTENANT, space/128);
-			genmonsters(l, TCAPTAIN, space/128);
+	case 0:
+		space += drunken(l, TTREE, 3, 0, 3);
 		break;
-		case 1:
-			space += drunken(l, TGRAVE, 2, 0, 0);
-			genmonsters(l, TGWIZARD, space/48);
-			genmonsters(l, TGHOST, space/32);
+	case 1:
+		space += drunken(l, TTREE, 3, 4, 10);
 		break;
-		case 2:
-			space += drunken(l, TLAVA, 2, 0, 0);
-			genmonsters(l, TGWIZARD, space/48);
-			genmonsters(l, TLARGECAT, space/32);
+	case 2:
+		space += drunken(l, TGRAVE, 2, 0, 0);
+		break;
+	case 3:
+		space += drunken(l, TLAVA, 2, 0, 0);
 		break;
 	}
 
 	/* clear space around stairs */
-	clear(l, pup, 1);
-	clear(l, pdown, 1);
+	clear(l, pup, 2);
+	clear(l, pdown, 2);
+
+	switch(type){
+	case 0:
+		several(l, &l->down, 1, TLICH, 2);
+		break;
+	case 1:
+		genmonsters(l, TGWIZARD, space/48);
+		genmonsters(l, TSOLDIER, space/64);
+		genmonsters(l, TSERGEANT, space/128);
+		several(l, &l->down, 1, TCAPTAIN, 0);
+		several(l, &l->down, 1, TLIEUTENANT, 1);
+		break;
+	case 2:
+		genmonsters(l, TGWIZARD, space/48);
+		genmonsters(l, TGHOST, space/64);
+		several(l, &l->down, 1, TLICH, 2);
+		clear(l, pdown, 1);
+		break;
+	case 3:
+		do {
+			p = (Point){nrand(l->width), nrand(l->height)};
+		} while(hasflagat(l, p, Fblocked|Fhasfeature));
+		several(l, &p, 1, TLARGECAT, 4);
+		do {
+			p = (Point){nrand(l->width), nrand(l->height)};
+		} while(hasflagat(l, p, Fblocked|Fhasfeature));
+		several(l, &p, 1, TGWIZARD, 4);
+		break;
+	}
+
 }
 
 Level*
-genlevel(int width, int height)
+genlevel(int width, int height, int type)
 {
 	int x, y;
 	Level *l;
@@ -207,7 +265,7 @@ genlevel(int width, int height)
 		}
 	}
 
-	gen(l, nrand(3));
+	gen(l, type);
 
 	return l;
 
@@ -254,7 +312,7 @@ lneighbor(Level *l, Point p, int *n)
 
 	for(i = 0; i < nelem(diff); i++){
 		p2 = addpt(p, diff[i]);
-		if(ptinrect(p2, l->r) && (!hasflagat(l, p2, Fblocked) || hasflagat(l, p2, Fhasmonster))){
+		if(ptinrect(p2, l->r)){ // && !hasflagat(l, p2, Fblocked)){ //|| hasflagat(l, p2, Fhasmonster))){
 			neigh[count++] = p2;
 		}
 	}
