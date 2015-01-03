@@ -254,7 +254,7 @@ view(Point pos, Level *l, int scrwidth, int scrheight)
 }
 
 void
-redraw(UI *ui, int new)
+redraw(UI *ui, int new, int justui)
 {
 	int width, height, uisz;
 
@@ -274,12 +274,14 @@ redraw(UI *ui, int new)
 
 	ui->uir = Rpt(Pt(screen->r.min.x, screen->r.max.y-(font->height*uisz)), screen->r.max);
 
-	width = Dx(screen->r) / ui->tiles->width;
-	height = (Dy(screen->r) - (font->height*2)) / ui->tiles->height;
-	ui->viewr = view(player->pt, player->l, width, height);
-	ui->camp = subpt(Pt(width/2, height/2), player->pt);
-	draw(screen, screen->r, display->black, nil, ZP);
-	drawlevel(player->l, ui->tiles, ui->viewr);
+	if(!justui){
+		width = Dx(screen->r) / ui->tiles->width;
+		height = (Dy(screen->r) - (font->height*2)) / ui->tiles->height;
+		ui->viewr = view(player->pt, player->l, width, height);
+		ui->camp = subpt(Pt(width/2, height/2), player->pt);
+		draw(screen, screen->r, display->black, nil, ZP);
+		drawlevel(player->l, ui->tiles, ui->viewr);
+	}
 	drawui(ui->uir);
 	flushimage(display, 1);
 }
@@ -364,7 +366,7 @@ threadmain(int argc, char *argv[])
 	t->monst = player;
 	setflagat(level, player->pt, Fhasmonster|Fblocked);
 
-	redraw(&ui, 0);
+	redraw(&ui, 0, 0);
 
 	enum { AMOUSE, ARESIZE, AKEYBOARD, ALOG, AEND };
 	Alt a[AEND+1] = {
@@ -380,7 +382,7 @@ threadmain(int argc, char *argv[])
 		case AMOUSE:
 			break;
 		case ARESIZE:
-			redraw(&ui, 1);
+			redraw(&ui, 1, 0);
 			break;
 		case AKEYBOARD:
 			if(c == Kdel)
@@ -448,7 +450,7 @@ threadmain(int argc, char *argv[])
 				gameover++;
 			}
 
-			redraw(&ui, 0);
+			redraw(&ui, 0, 0);
 			break;
 		case ALOG:
 			if(ui.msg == nil){
@@ -465,7 +467,7 @@ threadmain(int argc, char *argv[])
 					lp->next = nil;
 				}
 			}
-			redraw(&ui, 0);
+			redraw(&ui, 0, 1);
 			break;
 		}
 	}

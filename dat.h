@@ -100,6 +100,9 @@ struct Monster
 	/* armor class */
 	long ac;
 
+	/* kill count */
+	long kills;
+
 	/* flags */
 	u32int flags;
 
