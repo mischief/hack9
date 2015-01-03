@@ -18,8 +18,8 @@ roll(int count, int sides)
 {
 	int d;
 	d = 0;
-	while(--count> 0)
-		d += nrand(sides+1);
+	while(count--> 0)
+		d += 1+nrand(sides);
 	return d;
 }
 

@@ -26,8 +26,9 @@ clear(Level *l, Point p, int dist)
 	}
 }
 
+/* more sbias makes it straighter. */
 static void
-drunk1(Level *l, Point p, int n)
+drunk1(Level *l, Point p, uint count, uint sbias)
 {
 	int cur, last;
 	Point next;
@@ -36,9 +37,9 @@ drunk1(Level *l, Point p, int n)
 
 	clipr = insetrect(l->r, 1);
 
-	last = 0;
-	while(n > 0){
-		if(nrand(4) == 0)
+	last = nrand(NCARDINAL);
+	while(count > 0){
+		if(nrand(sbias+1) == 0)
 			cur = nrand(NCARDINAL);
 		else
 			cur = last;
@@ -51,19 +52,19 @@ drunk1(Level *l, Point p, int n)
 			t = tileat(l, p);
 			t->feat = 0;
 			flagat(l, p) = 0;
-			n--;
+			count--;
 		}
 	}
 }
 
 static int
-drunken(Level *l, int type)
+drunken(Level *l, int type, int howmuch, int s1, int s2)
 {
 	int cnt, npath;
 	Point p, *path;
 	Tile *t;
 
-	cnt = ((l->width * l->height) / 4); //* 2;
+	cnt = ((l->width * l->height) / howmuch); //* 2;
 
 redo:
 	/* fill */
@@ -77,8 +78,8 @@ redo:
 		}
 	}
 
-	drunk1(l, l->up, cnt);
-	drunk1(l, l->down, cnt);
+	drunk1(l, l->up, cnt/2, s1);
+	drunk1(l, l->down, cnt/2, s2);
 
 	/* check reachability */
 	npath = pathfind(l, l->up, l->down, &path);
@@ -91,15 +92,42 @@ redo:
 }
 
 static void
-gen(Level *l)
+genmonsters(Level *l, int type, int count)
 {
-	int i, q, rnd, space, npath;
-	Point pup, pdown, p, *path;
+	int i;
+	Point p;
 	Tile *t;
 	Monster *m;
 
+	for(i = 0; i < count; i++){
+		do {
+			p = (Point){nrand(l->width), nrand(l->height)};
+		} while(hasflagat(l, p, Fblocked|Fhasfeature));
+
+		t = tileat(l, p);
+		t->unit = type;
+		m = monst(type);
+		m->l = l;
+		m->pt = p;
+		t->monst = m;
+		setflagat(l, p, Fblocked|Fhasmonster);
+
+		/* setup ai state */
+		idle(m);
+	}
+}
+
+static void
+gen(Level *l, int type)
+{
+	int space, npath;
+	Point pup, pdown, p, *path;
+	Tile *t;
+
 	pup = (Point){nrand(l->width-4)+2, nrand(l->height-4)+2};
-	tileat(l, pup)->feat = TUPSTAIR;
+	t = tileat(l, pup);
+	t->feat = TUPSTAIR;
+	t->portal = mallocz(sizeof(Portal), 1);
 	setflagat(l, pup, Fhasfeature|Fportal);
 	l->up = pup;
 
@@ -116,37 +144,34 @@ gen(Level *l)
 		if(npath < sqrt(l->width * l->height)-4)
 			continue;
 		setflagat(l, pdown, Fhasfeature|Fportal);
-		tileat(l, pdown)->feat = TDOWNSTAIR;
+		t = tileat(l, pdown);
+		t->feat = TDOWNSTAIR;
+		t->portal = mallocz(sizeof(Portal), 1);
 		l->down = pdown;
 		break;
 	}
 
 	space = 0;
 
-	space += drunken(l, TTREE);
-
-	/* some monsters */
-	q = (l->width*l->height) / 40;
-	q += 1;
-	rnd = nrand(q)+q;
-	for(i = 0; i < rnd && space > 10; i++){
-		do {
-			p = (Point){nrand(l->width), nrand(l->height)};
-		} while(hasflagat(l, p, Fblocked|Fhasfeature));
-
-		t = tileat(l, p);
-		q = nrand(4)+TSOLDIER;
-		t->unit = q;
-		m = monst(q);
-		m->l = l;
-		m->pt = p;
-		t->monst = m;
-		setflagat(l, p, Fblocked|Fhasmonster);
-
-		/* setup ai state */
-		idle(m);
-
-		space--;
+	switch(type){
+		case 0:
+			space += drunken(l, TTREE, 3, 4, 10);
+			genmonsters(l, TGWIZARD, space/48);
+			genmonsters(l, TSOLDIER, space/64);
+			genmonsters(l, TSERGEANT, space/128);
+			genmonsters(l, TLIEUTENANT, space/128);
+			genmonsters(l, TCAPTAIN, space/128);
+		break;
+		case 1:
+			space += drunken(l, TGRAVE, 2, 0, 0);
+			genmonsters(l, TGWIZARD, space/48);
+			genmonsters(l, TGHOST, space/32);
+		break;
+		case 2:
+			space += drunken(l, TLAVA, 2, 0, 0);
+			genmonsters(l, TGWIZARD, space/48);
+			genmonsters(l, TLARGECAT, space/32);
+		break;
 	}
 
 	/* clear space around stairs */
@@ -182,7 +207,7 @@ genlevel(int width, int height)
 		}
 	}
 
-	gen(l);
+	gen(l, nrand(3));
 
 	return l;
 

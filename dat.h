@@ -128,6 +128,7 @@ enum
 	TSERGEANT	= 281,
 	TLIEUTENANT	= 282,
 	TCAPTAIN	= 283,
+	TGHOST		= 290,
 	TWIZARD		= 349,
 	/* features */
 	TWALL		= 840,
@@ -135,6 +136,10 @@ enum
 	TFLOOR		= 848,
 	TUPSTAIR	= 851,
 	TDOWNSTAIR	= 852,
+	TGRAVE		= 856,
+	TWATER		= 860,
+	TICE		= 861,
+	TLAVA		= 862,
 };
 
 struct Portal

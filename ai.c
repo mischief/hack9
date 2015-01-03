@@ -168,7 +168,7 @@ attackexec(AIState *a)
 	mtarg = a->aux;
 
 	d = manhattan(m->pt, mtarg->pt);
-	if(d > ORTHOCOST*5 ){
+	if(mtarg->flags & Mdead || d > ORTHOCOST*5 ){
 		/* stop the chase */
 		anew = mpopstate(m);
 		freestate(anew);

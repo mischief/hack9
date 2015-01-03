@@ -98,16 +98,31 @@ mpopstate(Monster *m)
 static int
 mattack(Monster *m, Monster *mt)
 {
-	int hit, dmg;
-	hit = roll(1, 20);
-	if(hit > 10+mt->ac){
+	int hit, crit, dmg;
+	hit = roll(1, 100);
+	if(hit < 10+abs(mt->ac-10)*2){
 		warn("the %s misses!", m->md->name);
 		return 0;
 	}
 
 	dmg = 1+roll(m->md->atk, m->md->rolls);
-	warn("the %s hits for %d!", m->md->name, dmg);
+
+	if(dmg && mt->ac < 0){
+		dmg -= 1+nrand(-mt->ac);
+		if(dmg < 1)
+			dmg = 1;
+	}
+
+	crit = roll(1, 5);
+	if(crit == 1){
+		dmg *= 2;
+		warn("the %s critically strikes for %d!", m->md->name, dmg);
+	} else {
+		warn("the %s hits for %d!", m->md->name, dmg);
+	}
+
 	mt->hp -= dmg;
+
 	if(mt->hp < 1){
 		mt->flags = Mdead;
 		bad("the %s is killed!", mt->md->name);
@@ -156,29 +171,32 @@ maction(Monster *m, int what, Point where)
 		break;
 	case MUSE:
 		/* portal */
-/*
-		t = tileat(level, src);
-		what = t->unit;
-		if(t->feat == (dir==UP ? TUPSTAIR : TDOWNSTAIR)){
-			m = t->monst;
-			t->monst = nil;
-			freelevel(level);
-			if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE)) == nil)
-				sysfatal("genlevel: %r");
+		cur = tileat(m->l, m->pt);
+		what = cur->unit;
+		if(cur->portal != nil){
+			clrflagat(m->l, m->pt, (Fhasmonster|Fblocked));
+			m = cur->monst;
+			cur->monst = nil;
+			if(cur->portal->to == nil){
+				if((cur->portal->to = genlevel(nrand(20)+20, nrand(20)+20)) == nil)
+					sysfatal("genlevel: %r");
 
-			if(dir == UP)
-				dst = level->down;
-			else
-				dst = level->up;
+				cur->portal->pt = cur->portal->to->up;
+				targ = tileat(cur->portal->to, cur->portal->pt);
+				if(targ->portal != nil){
+					targ->portal->to = m->l;
+					targ->portal->pt = m->pt;
+				}
+			}
 
-			t = tileat(level, dst);
-			t->unit = what;
-			t->monst = m;
-			setflagat(level, dst, Fhasmonster|Fblocked);
-			return subpt(src, dst);
+			targ = tileat(cur->portal->to, cur->portal->pt);
+			targ->unit = what;
+			targ->monst = m;
+			m->l = cur->portal->to;
+			m->pt = cur->portal->pt;
+			setflagat(cur->portal->to, cur->portal->pt, Fhasmonster|Fblocked);
+			return 1;
 		}
-*/
-		return -1;
 		break;
 	}
 

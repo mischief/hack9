@@ -15,7 +15,6 @@ enum
 
 static int debug;
 static long turn = 0;
-static Level *level;
 static char *user;
 static Monster *player;
 static int gameover = 0;
@@ -65,7 +64,7 @@ initui(char *name)
 	if((ui.kc = initkeyboard(nil)) == nil)
 		sysfatal("initkeyboard: %r");
 
-	if((ui.msgc = chancreate(sizeof(Msg*), 100)) == nil)
+	if((ui.msgc = chancreate(sizeof(Msg*), debug?1000:100)) == nil)
 		sysfatal("chancreate: %r");
 
 	if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil)
@@ -277,10 +276,10 @@ redraw(UI *ui, int new)
 
 	width = Dx(screen->r) / ui->tiles->width;
 	height = (Dy(screen->r) - (font->height*2)) / ui->tiles->height;
-	ui->viewr = view(player->pt, level, width, height);
+	ui->viewr = view(player->pt, player->l, width, height);
 	ui->camp = subpt(Pt(width/2, height/2), player->pt);
 	draw(screen, screen->r, display->black, nil, ZP);
-	drawlevel(level, ui->tiles, ui->viewr);
+	drawlevel(player->l, ui->tiles, ui->viewr);
 	drawui(ui->uir);
 	flushimage(display, 1);
 }
@@ -293,9 +292,9 @@ movemons(void)
 	Monster *m;
 
 	nmove = 0;
-	for(p.x = 0; p.x < level->width; p.x++){
-		for(p.y = 0; p.y < level->height; p.y++){
-			if(!eqpt(p, player->pt) && hasflagat(level, p, Fhasmonster))
+	for(p.x = 0; p.x < player->l->width; p.x++){
+		for(p.y = 0; p.y < player->l->height; p.y++){
+			if(!eqpt(p, player->pt) && hasflagat(player->l, p, Fhasmonster))
 				nmove++;
 		}
 	}
@@ -305,16 +304,16 @@ movemons(void)
 		sysfatal("movemons: %r");
 
 	i = 0;
-	for(p.x = 0; p.x < level->width; p.x++){
-		for(p.y = 0; p.y < level->height; p.y++){
-			if(!eqpt(p, player->pt) && hasflagat(level, p, Fhasmonster))
+	for(p.x = 0; p.x < player->l->width; p.x++){
+		for(p.y = 0; p.y < player->l->height; p.y++){
+			if(!eqpt(p, player->pt) && hasflagat(player->l, p, Fhasmonster))
 				tomove[i++] = p;
 		}
 	}
 
 	for(i = 0; i < nmove; i++){
 		p = tomove[i];
-		m = tileat(level, p)->monst;
+		m = tileat(player->l, p)->monst;
 
 		/* it's possible the monster died in the meantime. */
 		if(m == nil)
@@ -334,6 +333,7 @@ threadmain(int argc, char *argv[])
 	/* of viewport, in size of tiles */
 	int move, dir;
 	Tile *t;
+	Level *level;
 
 	ARGBEGIN{
 	case 'd':
@@ -349,6 +349,7 @@ threadmain(int argc, char *argv[])
 
 	initui(argv0);
 
+	/* initial level */
 	if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE)) == nil)
 		sysfatal("genlevel: %r");
 
@@ -434,7 +435,7 @@ threadmain(int argc, char *argv[])
 				player->hp++;
 			}
 
-			if(move != MNONE && dir != NODIR){
+			if(move != MNONE){
 				if(maction(player, move, addpt(player->pt, cardinals[dir])) < 0)
 					msg("ouch!");
 			}
