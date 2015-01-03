@@ -126,7 +126,7 @@ mattack(Monster *m, Monster *mt)
 	if(mt->hp < 1){
 		mt->flags = Mdead;
 		m->kills++;
-		bad("the %s is killed!", mt->md->name);
+		bad("the %s kills the %s!", m->md->name, mt->md->name);
 		return 1;
 	}
 
