@@ -115,9 +115,9 @@ genmonsters(Level *l, int type, int count)
 	Tile *t;
 
 	for(i = 0; i < count; i++){
-		do {
+		do{
 			p = (Point){nrand(l->width), nrand(l->height)};
-		} while(hasflagat(l, p, Fhasmonster|Fhasfeature|Fblocked));
+		}while(hasflagat(l, p, Fhasmonster|Fhasfeature|Fblocked));
 
 		t = tileat(l, p);
 		t->unit = type;
@@ -164,15 +164,15 @@ gen(Level *l, int type)
 	while(1){
 		if(!eqpt(pup,ZP))
 			flagat(l, pup) = 0;
-		do {
+		do{
 			pup = (Point){nrand(l->width), nrand(l->height)};
-		} while(!ptinrect(pup, insetrect(l->r, 3)));
+		}while(!ptinrect(pup, insetrect(l->r, 3)));
 
 		if(!eqpt(pdown, ZP))
 			flagat(l, pup) = 0;
-		do {
+		do{
 			pdown = (Point){nrand(l->width), nrand(l->height)};
-		} while(!ptinrect(pdown, insetrect(l->r, 3)));
+		}while(!ptinrect(pdown, insetrect(l->r, 3)));
 
 		/* already upstair? */
 		if(flagat(l, pdown) & Fportal)
@@ -180,7 +180,7 @@ gen(Level *l, int type)
 		/* too close? */
 		p = subpt(pup, pdown);
 		if((npath = pathfind(l, pup, pdown, &path, Fblocked)) < 0)
-			sysfatal("pathfind: %r");
+			continue;
 		free(path);
 		if(npath < sqrt(l->width * l->height)-4)
 			continue;
@@ -201,28 +201,17 @@ gen(Level *l, int type)
 
 	switch(type){
 	case 0:
-		space += drunken(l, TTREE, 3, 0, 3);
+		drunken(l, TTREE, 3, 3, 3);
+		clear(l, pup, 1);
+		clear(l, pdown, 1);
+		several(l, &l->down, 1, TLICH, 1);
+		several(l, &l->up, 1, TGWIZARD, 1);
+		break;
 		break;
 	case 1:
-		space += drunken(l, TTREE, 3, 4, 10);
-		break;
-	case 2:
-		space += drunken(l, TGRAVE, 2, 0, 0);
-		break;
-	case 3:
-		space += drunken(l, TLAVA, 2, 0, 0);
-		break;
-	}
-
-	/* clear space around stairs */
-	clear(l, pup, 2);
-	clear(l, pdown, 2);
-
-	switch(type){
-	case 0:
-		several(l, &l->down, 1, TLICH, 2);
-		break;
-	case 1:
+		space += drunken(l, TTREE, 2, 4, 4);
+		clear(l, pup, 1);
+		clear(l, pdown, 1);
 		genmonsters(l, TGWIZARD, space/48);
 		genmonsters(l, TSOLDIER, space/64);
 		genmonsters(l, TSERGEANT, space/128);
@@ -230,23 +219,36 @@ gen(Level *l, int type)
 		several(l, &l->down, 1, TLIEUTENANT, 1);
 		break;
 	case 2:
+		space += drunken(l, TGRAVE, 2, 0, 0);
+		clear(l, pup, 2);
+		clear(l, pdown, 2);
 		genmonsters(l, TGWIZARD, space/48);
 		genmonsters(l, TGHOST, space/64);
 		several(l, &l->down, 1, TLICH, 2);
 		clear(l, pdown, 1);
 		break;
 	case 3:
-		do {
+		drunken(l, TLAVA, 2, 1, 1);
+		clear(l, pup, 2);
+		clear(l, pdown, 2);
+		do{
 			p = (Point){nrand(l->width), nrand(l->height)};
-		} while(hasflagat(l, p, Fblocked|Fhasfeature));
-		several(l, &p, 1, TLARGECAT, 4);
-		do {
+		}while(hasflagat(l, p, Fblocked|Fhasfeature));
+		several(l, &p, 1, TLARGECAT, 2);
+		do{
 			p = (Point){nrand(l->width), nrand(l->height)};
-		} while(hasflagat(l, p, Fblocked|Fhasfeature));
-		several(l, &p, 1, TGWIZARD, 4);
+		}while(hasflagat(l, p, Fblocked|Fhasfeature));
+		several(l, &p, 1, TLARGECAT, 2);
+		do{
+			p = (Point){nrand(l->width), nrand(l->height)};
+		}while(hasflagat(l, p, Fblocked|Fhasfeature));
+		several(l, &p, 1, TGWIZARD, 2);
+		do{
+			p = (Point){nrand(l->width), nrand(l->height)};
+		}while(hasflagat(l, p, Fblocked|Fhasfeature));
+		several(l, &p, 1, TGWIZARD, 2);
 		break;
 	}
-
 }
 
 Level*

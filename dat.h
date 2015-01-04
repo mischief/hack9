@@ -61,6 +61,7 @@ struct MonsterData
 {
 	char *name;
 	char align;
+	uint mvr;
 	uint maxhp;
 	uint def;
 	uint atk;
@@ -95,6 +96,13 @@ struct Monster
 
 	/* alignment */
 	char align;
+
+	/* move rate */
+	long mvr;
+	/* move points */
+	long mvp;
+	/* turn counter */
+	long turns;
 
 	/* current hp */
 	long hp;
@@ -184,11 +192,11 @@ struct Tile
 enum
 {
 	/* tile flags */
-	Fhasobject	= 0x1,
+	Fblocked	= 0x1,
 	Fhasmonster	= 0x2,
-	Fhasitem	= 0x4,
-	Fhasfeature	= 0x8,
-	Fblocked	= 0x10,
+	Fhasfeature	= 0x4,
+	Fhasobject	= 0x8,
+	Fhasitem	= 0x10,
 	Fportal		= 0x20,
 };
 

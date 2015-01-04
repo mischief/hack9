@@ -54,8 +54,8 @@ idleexec(AIState *a)
 {
 	idledata *d;
 	Monster *m, *mt;
-	int i, r, xd, yd, xs, ys;
-	Point c, p, s;
+	int i, r, xd, yd, xs, ys, npath;
+	Point c, p, s, *path;
 	d = a->aux;
 	m = a->m;
 
@@ -94,8 +94,18 @@ idleexec(AIState *a)
 					if(hasflagat(m->l, s, Fhasmonster)){
 						mt = tileat(m->l, s)->monst;
 						if(abs(m->align - mt->align) > 15){
-							mpushstate(m, attack(m, mt));
+							if(manhattan(m->pt, s) != ORTHOCOST){
+								npath = pathfind(m->l, m->pt, s, &path, Fblocked);
+								if(npath < 0)
+									continue;
+								if(npath > r*2){
+									free(path);
+									continue;
+								}
+								free(path);
+							}
 							d->attacking = 1;
+							mpushstate(m, attack(m, mt));
 							return;
 						}
 					}
@@ -175,7 +185,7 @@ walktoinner(AIState *a)
 	d = a->aux;
 	m = a->m;
 
-	dbg("%s path → %P %d/%d", m->md->name, d->dst, d->next, d->npath);
+	//dbg("%s path → %P %d/%d", m->md->name, d->dst, d->next, d->npath);
 	if(d->path == nil || !eqpt(m->pt, d->dst)){
 		if(d->path != nil){
 			free(d->path);
@@ -186,13 +196,13 @@ walktoinner(AIState *a)
 		d->next = 1;
 		d->blocked = 0;
 		if(d->npath < 0){
-			dbg("%s route to %P blocked ", m->md->name, d->dst);
+			//dbg("%s route to %P blocked; routing through monsters", m->md->name, d->dst);
 			/* path not through monsters available? */
 			d->npath = pathfind(m->l, m->pt, d->dst, &d->path, Fhasfeature);
 			d->next = 1;
-			d->blocked = 0;
+			d->blocked = 1;
 			if(d->npath < 0){
-				return -1;
+				goto blocked;
 			}
 		}
 	}
@@ -208,10 +218,13 @@ walktoinner(AIState *a)
 	//dbg("next %P %06b", p, flagat(m->l, p));
 
 	if(hasflagat(m->l, p, Fblocked)){
+blocked:
 		dbg("%s blocked %d/%d", m->md->name, d->blocked, d->wait);
 		if(++d->blocked > d->wait){
-			free(d->path);
-			d->path = nil;
+			if(d->path != nil){
+				free(d->path);
+				d->path = nil;
+			}
 			d->npath = 0;
 			return -1;
 		}

@@ -22,13 +22,14 @@ monst(int idx)
 	if(m == nil)
 		return nil;
 
-	m->md = md;
+	m->align = md->align;
+	m->mvr = md->mvr;
+	m->mvp = nrand(m->mvr);
 	m->hp = md->maxhp;
 	m->ac = md->def;
-	m->align = md->align;
+	m->md = md;
 
 	incref(m);
-
 	return m;
 
 missing:
@@ -60,12 +61,26 @@ mfree(Monster *m)
 int
 mupdate(Monster *m)
 {
-	if(m->aglobal != nil)
-		m->aglobal->exec(m->aglobal);
-	if(m->ai != nil){
-		dbg("the %s is %sing...", m->md->name, m->ai->name);
-		if(m->ai->exec != nil)
-			m->ai->exec(m->ai);
+	m->mvp += m->mvr;
+
+	while(m->mvp > 12){
+		if(m->aglobal != nil)
+			m->aglobal->exec(m->aglobal);
+		if(m->ai != nil){
+			dbg("the %s is %sing...", m->md->name, m->ai->name);
+			if(m->ai->exec != nil)
+				m->ai->exec(m->ai);
+		} else {
+			dbg("the %s is %sing...", m->md->name, m->aglobal->name);
+		}
+
+		m->mvp -= 12;
+		m->turns++;
+
+		/* dead men tell no tales */
+		if((m->flags & Mdead) == 0)
+		if(m->turns % 3 == 0 && m->hp < m->md->maxhp)
+			m->hp++;
 	}
 
 	return 0;
@@ -77,7 +92,6 @@ mpushstate(Monster *m, AIState *a)
 	assert(a != nil);
 	a->prev = m->ai;
 	m->ai = a;
-	dbg("the %s is now %sing...", m->md->name, a->name);
 	if(a->enter != nil)
 		a->enter(a);
 }
@@ -91,7 +105,6 @@ mpopstate(Monster *m)
 		return nil;
 
 	a = m->ai;
-	dbg("the %s stops %sing!", m->md->name, a->name);
 	if(a->exit != nil)
 		a->exit(a);
 	m->ai = a->prev;
@@ -151,7 +164,7 @@ maction(Monster *m, int what, Point where)
 		break;
 	case MMOVE:
 		targ = tileat(m->l, where);
-		if(hasflagat(m->l, where, Fhasmonster) && targ->monst != nil){
+		if(hasflagat(m->l, where, Fhasmonster) && targ->monst != nil && (targ->monst->flags & Mdead) == 0){
 			/* monster; attack it */
 			if(mattack(m, targ->monst) > 0){
 				clrflagat(m->l, where, Fhasmonster|Fblocked);
