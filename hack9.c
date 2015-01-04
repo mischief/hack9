@@ -6,6 +6,7 @@
 #include <mouse.h>
 
 #include "dat.h"
+#include "alg.h"
 
 enum
 {
@@ -374,23 +375,12 @@ monsort(const void *a, const void *b)
 void
 movemons(void)
 {
-	int i, nmove;
 	Point p;
-	Monster *m, **tomove;
+	Monster *m;
+	Priq *tomove;
 
-	nmove = 0;
-	for(p.x = 0; p.x < player->l->width; p.x++){
-		for(p.y = 0; p.y < player->l->height; p.y++){
-			if(hasflagat(player->l, p, Fhasmonster))
-				nmove++;
-		}
-	}
+	tomove = priqnew(32);
 
-	tomove = mallocz(sizeof(Monster*)*nmove, 1);
-	if(tomove == nil)
-		sysfatal("movemons: %r");
-
-	i = 0;
 	for(p.x = 0; p.x < player->l->width; p.x++){
 		for(p.y = 0; p.y < player->l->height; p.y++){
 			if(hasflagat(player->l, p, Fhasmonster)){
@@ -398,19 +388,15 @@ movemons(void)
 				if(m == nil)
 					sysfatal("nil m when flags %P = %06b", p, flagat(player->l, p));
 				incref(m);
-				tomove[i++] = m;
+				priqpush(tomove, m, monsort);
 			}
 		}
 	}
 
-	qsort(tomove, nmove, sizeof(Monster*), monsort);
-
-	for(i = 0; i < nmove; i++){
-		m = tomove[i];
+	while((m = priqpop(tomove, monsort)) != nil){
 		/* it's possible the monster died in the meantime. */
 		if((m->flags & Mdead) == 0)
 			mupdate(m);
-
 		mfree(m);
 	}
 
@@ -418,7 +404,7 @@ movemons(void)
 	if(player->flags & Mdead)
 		mupdate(player);
 
-	free(tomove);
+	priqfree(tomove);
 }
 
 static void
