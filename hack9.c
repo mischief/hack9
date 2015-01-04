@@ -413,11 +413,13 @@ movemons(void)
 }
 
 void
-uiexec(AIState*)
+uiexec(AIState *ai)
 {
 	Rune c;
 	Msg *l, *lp;
 	int move, dir;
+
+	USED(ai);
 
 	enum { ALOG, AMOUSE, ARESIZE, AKEYBOARD, AEND };
 	Alt a[AEND+1] = {
