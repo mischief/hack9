@@ -181,7 +181,9 @@ dbg(char *fmt, ...)
 static void
 drawlevel(Level *l, Tileset *ts, Rectangle r)
 {
-	int what, i, j;
+	int what;
+	ulong maxhp;
+	double hp;
 	char buf[16];
 	Point p, p2, sp, bot;
 	Image *c;
@@ -208,13 +210,13 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 				drawtile(ts, screen, sp, what);
 				if(t->monst != nil && t->monst != player){
 					m = t->monst;
-					i = m->hp, j = m->md->maxhp;
-					snprint(buf, sizeof(buf), "%d/%d HP", i, j);
-					if(i > (j/4)*3)
+					hp = m->hp, maxhp = m->md->maxhp;
+					snprint(buf, sizeof(buf), "%.0f/%lud HP", hp, maxhp);
+					if(hp > (maxhp/4)*3)
 						c = ui.cols[CGREEN];
-					else if(i > j/2)
+					else if(hp > maxhp/2)
 						c = ui.cols[CYELLOW];
-					else if(i > j/4)
+					else if(hp > maxhp/4)
 						c = ui.cols[CORANGE];
 					else
 						c = ui.cols[CRED];
@@ -237,7 +239,9 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 void
 drawui(Rectangle r)
 {
-	int i, j, logline, sw;
+	int i, logline, sw;
+	ulong maxhp;
+	double hp;
 	Point p;
 	Image *c;
 	char buf[256];
@@ -277,13 +281,13 @@ drawui(Rectangle r)
 	p = string(screen, p, display->white, ZP, font, buf);
 	p.x += sw;
 
-	i = player->hp, j = player->md->maxhp;
-	snprint(buf, sizeof(buf), "%d/%d HP", i, j);
-	if(i > (j/4)*3)
+	hp = player->hp, maxhp = player->md->maxhp;
+	snprint(buf, sizeof(buf), "%.1f/%lud HP", hp, maxhp);
+	if(hp > (maxhp/4)*3)
 		c = ui.cols[CGREEN];
-	else if(i > j/2)
+	else if(hp > maxhp/2)
 		c = ui.cols[CYELLOW];
-	else if(i > j/4)
+	else if(hp > maxhp/4)
 		c = ui.cols[CORANGE];
 	else
 		c = ui.cols[CRED];
@@ -391,6 +395,8 @@ movemons(void)
 		for(p.y = 0; p.y < player->l->height; p.y++){
 			if(hasflagat(player->l, p, Fhasmonster)){
 				m = tileat(player->l, p)->monst;
+				if(m == nil)
+					sysfatal("nil m when flags %P = %06b", p, flagat(player->l, p));
 				incref(m);
 				tomove[i++] = m;
 			}
@@ -672,8 +678,8 @@ threadmain(int argc, char *argv[])
 	player->ai = mkstate("input", player, nil, nil, uiexec, nil);
 
 	if(debug > 0){
-		player->hp = 1000;
-		player->md->maxhp = 1000;
+		player->hp = 500;
+		player->md->maxhp = 500;
 	}
 
 	redraw(&ui, 0, 0);

@@ -77,10 +77,13 @@ mupdate(Monster *m)
 		m->mvp -= 12;
 		m->turns++;
 
-		/* dead men tell no tales */
+		/* gain some hp if you aren't dead. */
 		if((m->flags & Mdead) == 0)
-		if(m->turns % 3 == 0 && m->hp < m->md->maxhp)
-			m->hp++;
+		if(m->hp < m->md->maxhp){
+			m->hp += (double)m->md->maxhp/100.0;
+			if(m->hp > m->md->maxhp)
+				m->hp = m->md->maxhp;
+		}
 	}
 
 	return 0;
@@ -140,7 +143,8 @@ mattack(Monster *m, Monster *mt)
 
 	mt->hp -= dmg;
 
-	if(mt->hp < 1){
+	if(mt->hp <= 0){
+		mt->hp = 0;
 		mt->flags = Mdead;
 		m->kills++;
 		bad("the %s kills the %s!", m->md->name, mt->md->name);

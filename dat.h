@@ -105,7 +105,7 @@ struct Monster
 	long turns;
 
 	/* current hp */
-	long hp;
+	double hp;
 
 	/* armor class */
 	long ac;
