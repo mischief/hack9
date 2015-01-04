@@ -349,10 +349,10 @@ redraw(UI *ui, int new, int justui)
  * mupdate.
  */
 static int
-monsort(void *a, void *b)
+monsort(const void *a, const void *b)
 {
 	int sa, sb;
-	Monster *am, *bm;
+	const Monster *am, *bm;
 	am = a, bm = b;
 	sa = am->mvp + am->mvr;
 	sb = bm->mvp + bm->mvr;
