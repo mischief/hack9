@@ -19,6 +19,8 @@ static char *user;
 static char *home;
 static Monster *player;
 static int gameover = 0;
+static Channel *ticktime;
+static Channel *tick;
 
 static Font *smallfont;
 
@@ -54,6 +56,7 @@ struct UI
 	Rectangle viewr;
 	Rectangle uir;
 	Point camp;
+	int autoidle;
 } ui;
 
 static void
@@ -412,6 +415,34 @@ movemons(void)
 	free(tomove);
 }
 
+static void
+tickproc(void *v)
+{
+	USED(v);
+
+	ulong time;
+	time = 0;
+	enum { ATIME, ATICK, AEND };
+	Alt a[AEND+1] = {
+		{ ticktime,	&time,	CHANRCV },
+		{ tick,		&time,	CHANNOP },
+		{ nil,		nil,	CHANEND },
+	};
+	for(;;){
+		switch(alt(a)){
+		case ATIME:
+			if(time == 0)
+				a[ATICK].op = CHANNOP;
+			else
+				a[ATICK].op = CHANSND;
+			break;
+		case ATICK:
+			sleep(time);
+			break;
+		}
+	}
+}
+
 void
 uiexec(AIState *ai)
 {
@@ -421,9 +452,10 @@ uiexec(AIState *ai)
 
 	USED(ai);
 
-	enum { ALOG, AMOUSE, ARESIZE, AKEYBOARD, AEND };
+	enum { ALOG, ATICK, AMOUSE, ARESIZE, AKEYBOARD, AEND };
 	Alt a[AEND+1] = {
 		{ ui.msgc,			&l,		CHANRCV },
+		{ tick,				nil,	CHANRCV },
 		{ ui.mc->c,			nil,	CHANRCV },
 		{ ui.mc->resizec,	nil,	CHANRCV },
 		{ ui.kc->c,			&c,		CHANRCV },
@@ -451,6 +483,8 @@ uiexec(AIState *ai)
 			}
 			redraw(&ui, 0, 1);
 			break;
+		case ATICK:
+			return;
 		case AMOUSE:
 			continue;
 		case ARESIZE:
@@ -472,6 +506,14 @@ uiexec(AIState *ai)
 			case Kdel:
 				threadexitsall(nil);
 				break;
+			case 'A':
+				if(ui.autoidle == 0){
+					ui.autoidle = 250;
+				} else {
+					ui.autoidle = 0;
+				}
+				sendul(ticktime, ui.autoidle);
+				continue;
 			case 'h':
 			case Kleft:
 				move = MMOVE;
@@ -597,6 +639,10 @@ threadmain(int argc, char *argv[])
 	home = getenv("home");
 
 	initui(argv0);
+
+	ticktime = chancreate(sizeof(ulong), 0);
+	tick = chancreate(sizeof(ulong), 0);
+	proccreate(tickproc, nil, 512);
 
 	/* initial level */
 	if(debug > 0){
