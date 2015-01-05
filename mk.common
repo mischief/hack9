@@ -14,7 +14,6 @@ OFILES=\
 	monstdata.$O\
 	path.$O\
 	tile.$O\
+	ui.$O\
 	util.$O\
-
-CLEANFILES=$O'.*'
 

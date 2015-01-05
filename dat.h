@@ -9,6 +9,10 @@ typedef struct Camera Camera;
 
 /* hack9.c */
 extern int debug;
+extern Monster *player;
+extern char *user;
+extern char *home;
+extern long turn;
 void msg(char *fmt, ...);
 void good(char *fmt, ...);
 void warn(char *fmt, ...);
@@ -240,6 +244,11 @@ enum {
 /* path.c */
 int manhattan(Point cur, Point targ);
 int pathfind(Level *l, Point start, Point end, Point **path, int not);
+
+/* ui.c */
+void uiinit(char *name);
+void uiexec(AIState *ai);
+void uiredraw(int justui);
 
 /* util.c */
 enum
