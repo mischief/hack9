@@ -126,6 +126,8 @@ uiinit(char *name)
 	ui.cols[CRED] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DRed);
 	ui.cols[CGREY] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xAAAAAAFF);
 	ui.cols[CMAGENTA] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DMagenta);
+
+	ui.uisz = 6;
 }
 
 static void
