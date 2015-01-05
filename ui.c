@@ -150,7 +150,7 @@ uimsg(uint color, char *fmt, va_list arg)
 	l->color = color;
 	vsnprint(l->msg, sizeof(l->msg)-1, fmt, arg);
 	if(nbsendp(ui.msgc, l) == 0)
-		threadcreate(tmsg, l, 512);
+		threadcreate(tmsg, l, 1024);
 }
 
 void
