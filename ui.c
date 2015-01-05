@@ -102,7 +102,7 @@ uiinit(char *name)
 	if((ui.tick = chancreate(sizeof(ulong), 0)) == nil)
 		sysfatal("chancreate: %r");
 
-	proccreate(tickproc, nil, 512);
+	proccreate(tickproc, nil, 4096);
 
 	if((ui.msgc = chancreate(sizeof(Msg*), 100)) == nil)
 		sysfatal("chancreate: %r");
