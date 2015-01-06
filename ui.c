@@ -518,7 +518,7 @@ uiexec(AIState *ai)
 				move = MSPECIAL;
 				km = (KeyMenu){"in what direction?", dirmenu};
 				i = menu(ui.kc, ui.mc, &km);
-				if(i > 0 && i < NCARDINAL)
+				if(i >= WEST && i < NCARDINAL)
 					dir = i;
 				if(dir == NODIR){
 					msg("bad direction for special");
