@@ -1,25 +1,8 @@
 </$objtype/mkfile
 
 BIN=$home/bin/$objtype
-TARG=hack9
 
-HFILES=\
-	dat.h\
-	alg.h\
-
-OFILES=\
-	ai.$O\
-	alg.$O\
-	camera.$O\
-	hack9.$O\
-	level.$O\
-	monst.$O\
-	monstdata.$O\
-	path.$O\
-	tile.$O\
-	util.$O\
-
-CLEANFILES=$O.alg
+<mk.common
 
 </sys/src/cmd/mkone
 
