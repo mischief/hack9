@@ -465,7 +465,8 @@ uiexec(AIState *ai)
 			redraw(&ui, 1, 0);
 			continue;
 		case AKEYBOARD:
-			if(c == Kdel)
+			/* Kdel */
+			if(c == 0x7f)
 				threadexitsall(nil);
 
 			if(gameover > 0){
@@ -477,7 +478,7 @@ uiexec(AIState *ai)
 			dir = NODIR;
 
 			switch(c){
-			case Kdel:
+			case 0x7f:
 				threadexitsall(nil);
 				break;
 			case 'A':
