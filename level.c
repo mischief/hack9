@@ -5,6 +5,7 @@
 
 #include "dat.h"
 
+/* clear removes all monsters/features near p. */
 static void
 clear(Level *l, Point p, int dist)
 {
@@ -61,6 +62,12 @@ drunk1(Level *l, Point p, uint count, uint sbias)
 	}
 }
 
+/*
+ * drunken performs the drunkard's walk. as s1 and
+ * s2 increase, the paths become more biased toward
+ * 'straight'. it loops until the downstairs is
+ * reachable from the upstairs.
+ */
 static int
 drunken(Level *l, int type, int howmuch, int s1, int s2)
 {
@@ -95,6 +102,7 @@ redo:
 	return cnt * 2;
 }
 
+/* create a monster in the idle state */
 static Monster*
 mkmons(Level *l, Point p, int type)
 {
@@ -107,6 +115,7 @@ mkmons(Level *l, Point p, int type)
 	return m;
 }
 
+/* genmonsters spawns count of type monsters at random places on l. */
 static void
 genmonsters(Level *l, int type, int count)
 {
@@ -126,8 +135,15 @@ genmonsters(Level *l, int type, int count)
 	}
 }
 
+/*
+ * several is a recursive function, that spawns monsters
+ * centered at p[0] expaning outward according to a
+ * von neumann neighborhood with radius r. for example:
+ *	several(l, p, 1, TGHOST, 2);
+ * spawns 13 ghosts centered at p on l.
+ */
 static void
-several(Level *l, Point *p, int count, int type, int level)
+several(Level *l, Point *p, int count, int type, int r)
 {
 	int i, j, n;
 	Point *neigh;
@@ -139,10 +155,10 @@ several(Level *l, Point *p, int count, int type, int level)
 			t->monst = mkmons(l, p[i], type);
 			setflagat(l, p[i], Fblocked|Fhasmonster);
 		}
-		if(level > 0){
+		if(r > 0){
 			neigh = lneighbor(l, p[i], &n);
 			for(j = 0; j < n; j++){
-				several(l, neigh, n, type, level-1);
+				several(l, neigh, n, type, r-1);
 			}
 			free(neigh);
 		}
