@@ -25,7 +25,7 @@ long turn = 0;
  * mupdate.
  */
 static int
-monsort(const void *a, const void *b)
+monsort(void *a, void *b)
 {
 	int sa, sb;
 	const Monster *am, *bm;
