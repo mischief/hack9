@@ -229,7 +229,7 @@ gen(Level *l, int type)
 		break;
 		break;
 	case 1:
-		space += drunken(l, TTREE, 2, 4, 4);
+		space += drunken(l, TTREE, 2, 0, 0);
 		clear(l, pup, 1);
 		clear(l, pdown, 1);
 		genmonsters(l, TGWIZARD, space/128);
@@ -242,7 +242,7 @@ gen(Level *l, int type)
 		addspawn(l, l->up, TGWIZARD, 20);
 		break;
 	case 2:
-		space += drunken(l, TGRAVE, 2, 0, 0);
+		space += drunken(l, TGRAVE, 2, 4, 4);
 		clear(l, l->up, 2);
 		clear(l, l->down, 2);
 		genmonsters(l, TGWIZARD, space/48);
