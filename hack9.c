@@ -136,7 +136,7 @@ threadmain(int argc, char *argv[])
 	t = tileat(level, player->pt);
 	t->unit = TWIZARD;
 	t->monst = player;
-	setflagat(level, player->pt, Fhasmonster|Fblocked);
+	setflagat(level, player->pt, Fhasmonster);
 
 	player->ai = mkstate("input", player, nil, nil, uiexec, nil);
 

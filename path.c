@@ -76,7 +76,7 @@ pathfind(Level *l, Point start, Point end, Point **path, int not)
 		for(i = 0; i < nneigh; i++){
 			pt = neighborp[i];
 			neighbor = &nodes[pt.y*l->width + pt.x];
-			if(eqpt(pt, end) || (flagat(l, pt) & not) != not)
+			if(eqpt(pt, end) || (flagat(l, pt) & not) == 0)
 			if(!neighbor->closed){
 				if(!priqhas(q, neighbor)){
 					neighbor->pt = pt;

@@ -188,49 +188,39 @@ walktoinner(AIState *a)
 	d = a->aux;
 	m = a->m;
 
-	//dbg("%s path → %P %d/%d", m->md->name, d->dst, d->next, d->npath);
-	if(d->path == nil || !eqpt(m->pt, d->dst)){
-		if(d->path != nil){
-			free(d->path);
-			d->path = nil;
-		}
+	if(d->blocked > d->wait){
+		goto cleanup;
+	}
+
+	dbg("%s path -> %P %d/%d", m->md->name, d->dst, d->next, d->npath);
+	if(d->path == nil){
 		/* plan route */
-		d->npath = pathfind(m->l, m->pt, d->dst, &d->path, Fblocked);
+		d->npath = pathfind(m->l, m->pt, d->dst, &d->path, Fhasmonster|Fblocked);
 		d->next = 1;
-		d->blocked = 0;
 		if(d->npath < 0){
-			//dbg("%s route to %P blocked; routing through monsters", m->md->name, d->dst);
-			/* path not through monsters available? */
-			d->npath = pathfind(m->l, m->pt, d->dst, &d->path, Fhasfeature);
-			d->next = 1;
-			d->blocked = 1;
-			if(d->npath < 0){
-				goto blocked;
+			if(d->wait > 0){
+				dbg("%s route to %P blocked; routing through monsters", m->md->name, d->dst);
+				/* path not through monsters available? */
+				d->npath = pathfind(m->l, m->pt, d->dst, &d->path, Fblocked);
+				d->next = 1;
+				if(d->npath < 0){
+					d->blocked++;
+					return 0;
+				}
 			}
 		}
 	}
 
 	if(d->next == d->npath){
-		free(d->path);
-		d->path = nil;
-		d->npath = 0;
-		return -1;
+		goto cleanup;
 	}
 
 	p = d->path[d->next];
-	//dbg("next %P %06b", p, flagat(m->l, p));
+	dbg("next %P %06b", p, flagat(m->l, p));
 
-	if(hasflagat(m->l, p, Fblocked)){
-blocked:
+	if(hasflagat(m->l, p, Fhasmonster|Fblocked)){
+		d->blocked++;
 		dbg("%s blocked %d/%d", m->md->name, d->blocked, d->wait);
-		if(++d->blocked > d->wait){
-			if(d->path != nil){
-				free(d->path);
-				d->path = nil;
-			}
-			d->npath = 0;
-			return -1;
-		}
 		return 0;
 	}
 
@@ -239,6 +229,12 @@ blocked:
 
 	maction(m, MMOVE, p);
 	return 0;
+cleanup:
+	free(d->path);
+	d->path = nil;
+	d->npath = 0;
+	d->blocked = 0;
+	return -1;
 }
 
 static void
@@ -316,6 +312,7 @@ attackexec(AIState *a)
 		if(!eqpt(mt->pt, d->last)){
 			d->wd->dst = mt->pt;
 		}
+		d->wd->wait = 2;
 		walktoinner(d->w);
 		d->last = mt->pt;
 	} else {

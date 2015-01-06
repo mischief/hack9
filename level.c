@@ -131,7 +131,7 @@ genmonsters(Level *l, int type, int count)
 		t = tileat(l, p);
 		t->unit = type;
 		t->monst = mkmons(l, p, type);
-		setflagat(l, p, Fblocked|Fhasmonster);
+		setflagat(l, p, Fhasmonster);
 	}
 }
 
@@ -153,7 +153,7 @@ several(Level *l, Point *p, int count, int type, int r)
 			t = tileat(l, p[i]);
 			t->unit = type;
 			t->monst = mkmons(l, p[i], type);
-			setflagat(l, p[i], Fblocked|Fhasmonster);
+			setflagat(l, p[i], Fhasmonster);
 		}
 		if(r > 0){
 			neigh = lneighbor(l, p[i], &n);
@@ -240,8 +240,9 @@ gen(Level *l, int type)
 		drunken(l, TTREE, 3, 3, 3);
 		clear(l, pup, 1);
 		clear(l, pdown, 1);
-		several(l, &l->down, 1, TLICH, 1);
-		several(l, &l->up, 1, TGWIZARD, 1);
+		//several(l, &l->down, 1, TLICH, 0);
+		several(l, &l->down, 1, TGWIZARD, 1);
+		//several(l, &l->up, 1, TGWIZARD, 0);
 		break;
 		break;
 	case 1:

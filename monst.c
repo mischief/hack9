@@ -171,7 +171,8 @@ maction(Monster *m, int what, Point where)
 		if(hasflagat(m->l, where, Fhasmonster) && targ->monst != nil && (targ->monst->flags & Mdead) == 0){
 			/* monster; attack it */
 			if(mattack(m, targ->monst) > 0){
-				clrflagat(m->l, where, Fhasmonster|Fblocked);
+				/* dead. */
+				clrflagat(m->l, where, Fhasmonster);
 				mfree(targ->monst);
 				targ->monst = nil;
 				targ->unit = 0;
@@ -180,8 +181,8 @@ maction(Monster *m, int what, Point where)
 		} else if(!hasflagat(m->l, where, Fblocked)){
 			/* move */
 			cur = tileat(m->l, m->pt);
-			setflagat(m->l, where, (Fhasmonster|Fblocked));
-			clrflagat(m->l, m->pt, (Fhasmonster|Fblocked));
+			setflagat(m->l, where, (Fhasmonster));
+			clrflagat(m->l, m->pt, (Fhasmonster));
 			targ->unit = cur->unit;
 			cur->unit = 0;
 			targ->monst = cur->monst;
@@ -196,7 +197,7 @@ maction(Monster *m, int what, Point where)
 		cur = tileat(m->l, m->pt);
 		what = cur->unit;
 		if(cur->portal != nil){
-			clrflagat(m->l, m->pt, (Fhasmonster|Fblocked));
+			clrflagat(m->l, m->pt, (Fhasmonster));
 			m = cur->monst;
 			cur->monst = nil;
 			if(cur->portal->to == nil){
@@ -216,7 +217,7 @@ maction(Monster *m, int what, Point where)
 			targ->monst = m;
 			m->l = cur->portal->to;
 			m->pt = cur->portal->pt;
-			setflagat(cur->portal->to, cur->portal->pt, Fhasmonster|Fblocked);
+			setflagat(cur->portal->to, cur->portal->pt, Fhasmonster);
 			return 1;
 		}
 		break;
