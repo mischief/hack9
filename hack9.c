@@ -62,7 +62,7 @@ movemons(void)
 				/* i don't think this is supposed to happen. */
 				if(m == nil)
 					continue;
-				incref(m);
+				incref(&m->ref);
 				priqpush(tomove, m, monsort);
 			}
 		}
@@ -126,7 +126,7 @@ threadmain(int argc, char *argv[])
 	player = monst(TWIZARD);
 
 	/* don't delete when we die so ui works */
-	incref(player);
+	incref(&player->ref);
 
 	if(player == nil)
 		sysfatal("monst: %r");

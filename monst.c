@@ -29,7 +29,7 @@ monst(int idx)
 	m->ac = md->def;
 	m->md = md;
 
-	incref(m);
+	incref(&m->ref);
 	return m;
 
 missing:
@@ -42,7 +42,7 @@ mfree(Monster *m)
 {
 	AIState *a;
 
-	if(decref(m) != 0)
+	if(decref(&m->ref) != 0)
 		return;
 
 	if(m->aglobal != nil){

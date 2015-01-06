@@ -343,7 +343,7 @@ attack(Monster *m, Monster *targ)
 	attackdata *d;
 	AIState *i;
 	d = mallocz(sizeof(*d), 1);
-	incref(targ);
+	incref(&targ->ref);
 	d->mt = targ;
 	d->wd = mallocz(sizeof(walktodata), 1);
 	d->w = mkstate("chase", m, d->wd, nil, nil, walktoexit);
