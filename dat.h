@@ -271,10 +271,10 @@ void uiredraw(int justui);
 /* util.c */
 enum
 {
-	NORTH,
-	SOUTH,
-	EAST,
 	WEST,
+	SOUTH,
+	NORTH,
+	EAST,
 	NCARDINAL,
 	NODIR,
 };
@@ -283,3 +283,4 @@ extern Point cardinals[];
 int roll(int count, int sides);
 int min(int a, int b);
 int max(int a, int b);
+

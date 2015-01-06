@@ -6,9 +6,9 @@
 #include "dat.h"
 
 Point cardinals[] = {
-[NORTH]	{  0, -1 },
 [WEST]	{ -1,  0 },
 [SOUTH]	{  0,  1 },
+[NORTH]	{  0, -1 },
 [EAST]	{  1,  0 },
 [NODIR]	{  0,  0 },
 };

@@ -22,6 +22,17 @@ enum
 	CEND,
 };
 
+typedef struct KeyMenu KeyMenu;
+struct KeyMenu
+{
+	/* label printed with the menu */
+	char *label;
+	/* gen is called until it returns Runemax. */
+	Rune (*gen)(int, char**);
+};
+
+static int menu(Keyboardctl *kc, Mousectl *mc, KeyMenu *km);
+
 typedef struct Msg Msg;
 struct Msg
 {
@@ -369,7 +380,7 @@ redraw(UI *ui, int new, int justui)
 	if(!justui){
 		width = Dx(screen->r) / ui->tiles->width;
 		height = (Dy(screen->r) - (font->height*ui->uisz)) / ui->tiles->height;
-		ui->viewr = view(player->pt, player->l, width, height+1);
+		ui->viewr = view(player->pt, player->l, width, height+2);
 		ui->camp = subpt(Pt(width/2, height/2), player->pt);
 		draw(screen, screen->r, display->black, nil, ZP);
 		drawlevel(player->l, ui->tiles, ui->viewr);
@@ -384,12 +395,33 @@ uiredraw(int justui)
 	redraw(&ui, 0, justui);
 }
 
+static Rune
+dirmenu(int idx, char **s)
+{
+	switch(idx){
+	case WEST:
+		*s = "west";
+		return 'h';
+	case SOUTH:
+		*s = "south";
+		return 'j';
+	case NORTH:
+		*s = "north";
+		return 'k';
+	case EAST:
+		*s = "east";
+		return 'l';
+	}
+	return Runemax;
+}
+
 void
 uiexec(AIState *ai)
 {
+	int i, al, move, dir;
 	Rune c;
 	Msg *l, *lp;
-	int al, move, dir;
+	KeyMenu km;
 
 	USED(ai);
 
@@ -483,27 +515,10 @@ uiexec(AIState *ai)
 			case 's':
 				/* special */
 				move = MSPECIAL;
-				c = recvul(ui.kc->c);
-				switch(c){
-				case 'h':
-				case Kleft:
-					dir = WEST;
-					break;
-				case 'j':
-				case Kdown:
-					dir = SOUTH;
-					break;
-				case 'k':
-				case Kup:
-					dir = NORTH;
-					break;
-				case 'l':
-				case Kright:
-					dir = EAST;
-					break;
-				default:
-					break;
-				}
+				km = (KeyMenu){"in what direction?", dirmenu};
+				i = menu(ui.kc, ui.mc, &km);
+				if(i > 0 && i < NCARDINAL)
+					dir = i;
 				if(dir == NODIR){
 					msg("bad direction for special");
 					continue;
@@ -541,6 +556,91 @@ uiexec(AIState *ai)
 
 			redraw(&ui, 0, 0);
 			return;
+		}
+	}
+}
+
+static int
+ch2ind(KeyMenu *km, Rune want)
+{
+	int i;
+	char *s;
+	Rune c;
+
+	for(i = 0; (c=km->gen(i, &s)) != Runemax; i++){
+		if(c == want)
+			return i;
+	}
+	return -1;
+}
+
+enum {
+	Spacing	= 6,
+};
+
+static int
+menu(Keyboardctl *kc, Mousectl *mc, KeyMenu *km)
+{
+	int i, nitem, maxwidth;
+	char *s, buf[256];
+	Rune ch, in;
+	Point p;
+	Rectangle r;
+
+	maxwidth = 0;
+	for(nitem = 0; (ch=km->gen(nitem, &s)) != Runemax; nitem++){
+		snprint(buf, sizeof(buf), "%C - %s", ch, s);
+		i = stringwidth(font, buf);
+		if(i > maxwidth)
+			maxwidth = i;
+	}
+
+	i = stringwidth(font, km->label);
+	if(i > maxwidth)
+		maxwidth = i;
+
+	enum { AMOUSE, ARESIZE, AKEYBOARD, AEND };
+	Alt a[AEND+1] = {
+		{ mc->c,		&mc->Mouse,	CHANRCV },
+		{ mc->resizec,	nil,		CHANRCV },
+		{ kc->c,		&in,		CHANRCV },
+		{ nil,			nil,		CHANEND },
+	};
+
+	goto drawui;
+
+	for(;;){
+		switch(alt(a)){
+		case AMOUSE:
+			break;
+		case ARESIZE:
+			redraw(&ui, 1, 0);
+drawui:
+			r = insetrect(Rpt(screen->r.min, addpt(ui.uir.min, Pt(Dx(ui.uir), 0))), 10);
+			/* +1 for the label */
+			r.min.y += Dy(r) - (2*Spacing) - font->height*(nitem + 1);
+			r.max.x = r.min.x + (2*Spacing) + min(Dx(r), maxwidth);
+			r.max.y = r.min.y + (2*Spacing) + font->height*(nitem + 1);
+
+			draw(screen, r, display->black, nil, ZP);
+			border(screen, r, 2, display->white, ZP);
+			r = insetrect(r, Spacing);
+
+			p = r.min;
+			string(screen, p, ui.cols[CGREY], ZP, font, km->label);
+			p.y += font->height;
+			for(i = 0; i < nitem; i++){
+				ch = km->gen(i, &s);
+				snprint(buf, sizeof(buf), "%C - %s", ch, s);
+				string(screen, p, display->white, ZP, font, buf);
+				p.y += font->height;
+			}
+
+			flushimage(display, 1);
+			break;
+		case AKEYBOARD:
+			redraw(&ui, 0, 0);
+			return ch2ind(km, in);
 		}
 	}
 }
