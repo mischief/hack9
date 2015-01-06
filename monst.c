@@ -221,6 +221,7 @@ maction(Monster *m, int what, Point where)
 		}
 		break;
 	case MSPECIAL:
+		bad("the special move is broken. please fix me.");
 		break;
 	}
 
