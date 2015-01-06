@@ -2,6 +2,7 @@ typedef struct AIState AIState;
 typedef struct Tileset Tileset;
 typedef struct Tile Tile;
 typedef struct Portal Portal;
+typedef struct Spawn Spawn;
 typedef struct Level Level;
 typedef struct MonsterData MonsterData;
 typedef struct Monster Monster;
@@ -128,6 +129,7 @@ struct Monster
 	MonsterData *md;
 };
 
+/* monst.c */
 Monster *monst(int idx);
 void mfree(Monster *m);
 int mupdate(Monster *m);
@@ -158,6 +160,7 @@ enum
 	TWATER		= 860,
 	TICE		= 861,
 	TLAVA		= 862,
+	TPORTAL		= 891,
 };
 
 struct Portal
@@ -166,6 +169,16 @@ struct Portal
 	Level *to;
 	/* location in to */
 	Point pt;
+};
+
+struct Spawn
+{
+	/* where spawn occurs */
+	Point pt;
+	/* what to spawn */
+	int what;
+	/* frequency of spawn, modulo turns */
+	int freq;
 };
 
 struct Tile
@@ -214,6 +227,11 @@ struct Level
 	Rectangle r;
 	Point up;
 	Point down;
+
+	AIState *ai;
+
+	int		nspawns;
+	Spawn	spawns[10];
 };
 
 Level *genlevel(int width, int height, int type);

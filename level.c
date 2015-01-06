@@ -133,7 +133,7 @@ several(Level *l, Point *p, int count, int type, int level)
 	Point *neigh;
 	Tile *t;
 	for(i = 0; i < count; i++){
-		if(!hasflagat(l, p[i], Fblocked)){
+		if(!hasflagat(l, p[i], Fhasmonster)){
 			t = tileat(l, p[i]);
 			t->unit = type;
 			t->monst = mkmons(l, p[i], type);
@@ -145,6 +145,26 @@ several(Level *l, Point *p, int count, int type, int level)
 				several(l, neigh, n, type, level-1);
 			}
 			free(neigh);
+		}
+	}
+}
+
+static void addspawn(Level *l, Point p, int what, int freq)
+{
+	if(l->nspawns < nelem(l->spawns)-1)
+		l->spawns[l->nspawns++] = (Spawn){p, what, freq};
+}
+
+static void
+levelexec(AIState *a)
+{
+	int i;
+	Level *l;
+	l = a->aux;
+
+	for(i = 0; i < l->nspawns; i++){
+		if(turn % l->spawns[i].freq == 0){
+			several(l, &l->spawns[i].pt, 1, l->spawns[i].what, 0);
 		}
 	}
 }
@@ -212,20 +232,26 @@ gen(Level *l, int type)
 		space += drunken(l, TTREE, 2, 4, 4);
 		clear(l, pup, 1);
 		clear(l, pdown, 1);
-		genmonsters(l, TGWIZARD, space/48);
+		genmonsters(l, TGWIZARD, space/128);
 		genmonsters(l, TSOLDIER, space/64);
 		genmonsters(l, TSERGEANT, space/128);
 		several(l, &l->down, 1, TCAPTAIN, 0);
 		several(l, &l->down, 1, TLIEUTENANT, 1);
+		addspawn(l, l->down, TSOLDIER, 20);
+		addspawn(l, l->down, TSERGEANT, 40);
+		addspawn(l, l->up, TGWIZARD, 20);
 		break;
 	case 2:
 		space += drunken(l, TGRAVE, 2, 0, 0);
-		clear(l, pup, 2);
-		clear(l, pdown, 2);
+		clear(l, l->up, 2);
+		clear(l, l->down, 2);
 		genmonsters(l, TGWIZARD, space/48);
 		genmonsters(l, TGHOST, space/64);
 		several(l, &l->down, 1, TLICH, 2);
 		clear(l, pdown, 1);
+		addspawn(l, l->up, TGWIZARD, 11);
+		addspawn(l, l->down, TLICH, 61);
+		addspawn(l, l->down, TGHOST, 31);
 		break;
 	case 3:
 		drunken(l, TLAVA, 2, 1, 1);
@@ -234,21 +260,23 @@ gen(Level *l, int type)
 		do{
 			p = (Point){nrand(l->width), nrand(l->height)};
 		}while(hasflagat(l, p, Fblocked|Fhasfeature));
-		several(l, &p, 1, TLARGECAT, 2);
+		addspawn(l, p, TLARGECAT, 11);
 		do{
 			p = (Point){nrand(l->width), nrand(l->height)};
 		}while(hasflagat(l, p, Fblocked|Fhasfeature));
-		several(l, &p, 1, TLARGECAT, 2);
+		addspawn(l, p, TLARGECAT, 13);
 		do{
 			p = (Point){nrand(l->width), nrand(l->height)};
 		}while(hasflagat(l, p, Fblocked|Fhasfeature));
-		several(l, &p, 1, TGWIZARD, 2);
+		addspawn(l, p, TGWIZARD, 9);
 		do{
 			p = (Point){nrand(l->width), nrand(l->height)};
 		}while(hasflagat(l, p, Fblocked|Fhasfeature));
-		several(l, &p, 1, TGWIZARD, 2);
+		addspawn(l, p, TGWIZARD, 15);
 		break;
 	}
+
+	l->ai = mkstate("level", nil, l, nil, levelexec, nil);
 }
 
 Level*

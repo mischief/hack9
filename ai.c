@@ -93,6 +93,9 @@ idleexec(AIState *a)
 						continue;
 					if(hasflagat(m->l, s, Fhasmonster)){
 						mt = tileat(m->l, s)->monst;
+						/* BUG: should not be nil. */
+						if(mt == nil)
+							continue;
 						if(abs(m->align - mt->align) > 15){
 							if(manhattan(m->pt, s) != ORTHOCOST){
 								npath = pathfind(m->l, m->pt, s, &path, Fblocked);

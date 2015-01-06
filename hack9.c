@@ -45,16 +45,23 @@ movemons(void)
 {
 	Point p;
 	Monster *m;
+	Level *l;
 	Priq *tomove;
 
 	tomove = priqnew(32);
+	l = player->l;
 
-	for(p.x = 0; p.x < player->l->width; p.x++){
-		for(p.y = 0; p.y < player->l->height; p.y++){
-			if(hasflagat(player->l, p, Fhasmonster)){
-				m = tileat(player->l, p)->monst;
+	/* run ai on level, for spawns etc */
+	if(l->ai->exec != nil)
+		l->ai->exec(l->ai);
+
+	for(p.x = 0; p.x < l->width; p.x++){
+		for(p.y = 0; p.y < l->height; p.y++){
+			if(hasflagat(l, p, Fhasmonster)){
+				m = tileat(l, p)->monst;
+				/* i don't think this is supposed to happen. */
 				if(m == nil)
-					sysfatal("nil m when flags %P = %06b", p, flagat(player->l, p));
+					continue;
 				incref(m);
 				priqpush(tomove, m, monsort);
 			}
