@@ -602,10 +602,10 @@ menu(Keyboardctl *kc, Mousectl *mc, KeyMenu *km)
 
 	enum { AMOUSE, ARESIZE, AKEYBOARD, AEND };
 	Alt a[AEND+1] = {
-		{ mc->c,		&mc->Mouse,	CHANRCV },
-		{ mc->resizec,	nil,		CHANRCV },
-		{ kc->c,		&in,		CHANRCV },
-		{ nil,			nil,		CHANEND },
+		{ mc->c,		nil,	CHANRCV },
+		{ mc->resizec,	nil,	CHANRCV },
+		{ kc->c,		&in,	CHANRCV },
+		{ nil,			nil,	CHANEND },
 	};
 
 	goto drawui;
