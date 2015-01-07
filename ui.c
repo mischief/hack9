@@ -396,6 +396,17 @@ uiredraw(int justui)
 }
 
 static Rune
+dbgmenu(int idx, char **s)
+{
+	switch(idx){
+	case 0:
+		*s = "toggle debug flag";
+		return 'd';
+	}
+	return Runemax;
+}
+
+static Rune
 dirmenu(int idx, char **s)
 {
 	switch(idx){
@@ -489,6 +500,14 @@ uiexec(AIState *ai)
 				}
 				sendul(ui.tickcmd, ui.autoidle);
 				continue;
+			case 'D':
+				km = (KeyMenu){"debug menu", dbgmenu};
+				i = menu(ui.kc, ui.mc, &km);
+				switch(i){
+				case 0:
+					debug = !debug;
+				}
+				continue;	
 			case 'h':
 			case Kleft:
 				move = MMOVE;
