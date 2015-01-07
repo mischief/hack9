@@ -491,9 +491,6 @@ uiexec(AIState *ai)
 			dir = NODIR;
 
 			switch(c){
-			case 0x7f:
-				threadexitsall(nil);
-				break;
 			case 'A':
 				if(ui.autoidle == 0){
 					ui.autoidle = 250;
