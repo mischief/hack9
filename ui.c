@@ -513,6 +513,7 @@ uiexec(AIState *ai)
 						break;
 					}
 
+					incref(&player->ref);
 					player->flags &= ~Mdead;
 					player->hp = player->md->maxhp;
 					setflagat(player->l, player->pt, Fhasmonster);

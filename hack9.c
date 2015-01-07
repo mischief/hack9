@@ -124,13 +124,12 @@ threadmain(int argc, char *argv[])
 
 	/* the player */
 	player = monst(TWIZARD);
+	if(player == nil)
+		sysfatal("monst: %r");
 
 	/* don't delete when we die so ui works */
 	incref(&player->ref);
-	incref(&player->ref);
 
-	if(player == nil)
-		sysfatal("monst: %r");
 	player->l = level;
 	player->pt = level->up;
 	player->mvr = 16;
