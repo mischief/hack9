@@ -127,6 +127,7 @@ threadmain(int argc, char *argv[])
 
 	/* don't delete when we die so ui works */
 	incref(&player->ref);
+	incref(&player->ref);
 
 	if(player == nil)
 		sysfatal("monst: %r");
