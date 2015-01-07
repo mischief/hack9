@@ -18,7 +18,7 @@ mk
 ### unix ###
 * install [plan9port](https://github.com/9fans/plan9port).
 * make sure `$PLAN9` is set.
-* make sure `$PLAN9` is in `$PATH`.
+* make sure `$PLAN9/bin` is in `$PATH`.
 * run:
 ```
 #!sh
