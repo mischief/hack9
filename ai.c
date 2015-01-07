@@ -74,7 +74,7 @@ idleexec(AIState *a)
 		return;
 
 	/* find something to attack */
-	r = 4;
+	r = 8;
 	c = m->pt;
 	for(p.x = c.x; p.x >= c.x - r; p.x--){
 		for(p.y = c.y; p.y >= c.y - r; p.y--){
@@ -156,7 +156,7 @@ leave:
 			goto leave;
 	} while(!ptinrect(p, m->l->r) ||  hasflagat(m->l, p, Fblocked) || manhattan(m->pt, p) < ORTHOCOST*2);
 
-	mpushstate(m, walkto(m, p, 5));
+	mpushstate(m, walkto(m, p, 1));
 	a->aux=a;
 }
 
@@ -192,14 +192,14 @@ walktoinner(AIState *a)
 		goto cleanup;
 	}
 
-	dbg("%s path -> %P %d/%d", m->md->name, d->dst, d->next, d->npath);
+	//dbg("%s path -> %P %d/%d", m->md->name, d->dst, d->next, d->npath);
 	if(d->path == nil){
 		/* plan route */
 		d->npath = pathfind(m->l, m->pt, d->dst, &d->path, Fhasmonster|Fblocked);
 		d->next = 1;
 		if(d->npath < 0){
 			if(d->wait > 0){
-				dbg("%s route to %P blocked; routing through monsters", m->md->name, d->dst);
+				//dbg("%s route to %P blocked; routing through monsters", m->md->name, d->dst);
 				/* path not through monsters available? */
 				d->npath = pathfind(m->l, m->pt, d->dst, &d->path, Fblocked);
 				d->next = 1;
@@ -216,7 +216,7 @@ walktoinner(AIState *a)
 	}
 
 	p = d->path[d->next];
-	dbg("next %P %06b", p, flagat(m->l, p));
+	//dbg("next %P %06b", p, flagat(m->l, p));
 
 	if(hasflagat(m->l, p, Fhasmonster|Fblocked)){
 		d->blocked++;
@@ -313,7 +313,11 @@ attackexec(AIState *a)
 			d->wd->dst = mt->pt;
 		}
 		d->wd->wait = 2;
-		walktoinner(d->w);
+		if(walktoinner(d->w) < 0){
+			a = mpopstate(m);
+			freestate(a);
+			return;
+		}
 		d->last = mt->pt;
 	} else {
 		/* attack! */
