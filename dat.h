@@ -92,7 +92,10 @@ enum
 
 struct Monster
 {
+	/* references */
 	Ref ref;
+	/* type */
+	int type;
 
 	/* current level */
 	Level *l;

@@ -402,6 +402,9 @@ dbgmenu(int idx, char **s)
 	case 0:
 		*s = "toggle debug flag";
 		return 'd';
+	case 1:
+		*s = "revive and gain max hp";
+		return 'r';
 	}
 	return Runemax;
 }
@@ -482,7 +485,6 @@ uiexec(AIState *ai)
 
 			if(gameover > 0){
 				bad("you are dead. game over, man.");
-				c = '.';
 			}
 
 			move = MNONE;
@@ -506,7 +508,22 @@ uiexec(AIState *ai)
 				switch(i){
 				case 0:
 					debug = !debug;
+					break;
+				case 1:
+					/* revive */
+					if(hasflagat(player->l, player->pt, Fhasmonster)){
+						warn("tile player occupied is blocked");
+						break;
+					}
+
+					player->flags &= ~Mdead;
+					player->hp = player->md->maxhp;
+					setflagat(player->l, player->pt, Fhasmonster);
+					tileat(player->l, player->pt)->monst = player;
+					tileat(player->l, player->pt)->unit = player->type;
+					break;
 				}
+				redraw(&ui, 0, 0);
 				continue;	
 			case 'h':
 			case Kleft:
@@ -564,7 +581,7 @@ uiexec(AIState *ai)
 				continue;
 			}
 
-			if(move != MNONE){
+			if((player->flags & Mdead) == 0 && move != MNONE){
 				if(maction(player, move, addpt(player->pt, cardinals[dir])) < 0)
 					msg("ouch!");
 			}

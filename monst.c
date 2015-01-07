@@ -22,6 +22,7 @@ monst(int idx)
 	if(m == nil)
 		return nil;
 
+	m->type = idx;
 	m->align = md->align;
 	m->mvr = md->mvr;
 	m->mvp = nrand(m->mvr);
@@ -67,11 +68,11 @@ mupdate(Monster *m)
 		if(m->aglobal != nil)
 			m->aglobal->exec(m->aglobal);
 		if(m->ai != nil){
-			dbg("the %s is %sing...", m->md->name, m->ai->name);
+			//dbg("the %s is %sing...", m->md->name, m->ai->name);
 			if(m->ai->exec != nil)
 				m->ai->exec(m->ai);
 		} else {
-			dbg("the %s is %sing...", m->md->name, m->aglobal->name);
+			//dbg("the %s is %sing...", m->md->name, m->aglobal->name);
 		}
 
 		m->mvp -= 12;
