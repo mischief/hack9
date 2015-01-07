@@ -68,7 +68,7 @@ struct MonsterData
 	char align;
 	uint mvr;
 	uint maxhp;
-	uint def;
+	long def;
 	uint atk;
 	uint rolls;
 };
