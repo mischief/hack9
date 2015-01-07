@@ -521,6 +521,7 @@ uiexec(AIState *ai)
 					setflagat(player->l, player->pt, Fhasmonster);
 					tileat(player->l, player->pt)->monst = player;
 					tileat(player->l, player->pt)->unit = player->type;
+					gameover = 0;
 					break;
 				}
 				redraw(&ui, 0, 0);
