@@ -187,10 +187,6 @@ levelexec(AIState *a)
 
 	l = a->aux;
 
-	assert(l > (void*)0x1000);
-
-	assert(l != nil);
-
 	for(i = 0; i < l->nspawns; i++){
 		if(turn % l->spawns[i].freq == 0){
 			p = l->spawns[i].pt;
