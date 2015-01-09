@@ -172,6 +172,7 @@ typedef struct walktodata walktodata;
 struct walktodata
 {
 	Point dst;
+	Point last;
 	int npath;
 	int next;
 	Point *path;
@@ -188,7 +189,9 @@ walktoinner(AIState *a)
 	d = a->aux;
 	m = a->m;
 
-	if(d->blocked > d->wait){
+	/* d->last might not equal m->pt if some other
+	 * state pre-empted us, like attack */
+	if(!eqpt(d->last, m->pt) || d->blocked > d->wait){
 		goto cleanup;
 	}
 
@@ -228,6 +231,7 @@ walktoinner(AIState *a)
 	d->next++;
 
 	maction(m, MMOVE, p);
+	d->last = p;
 	return 0;
 cleanup:
 	free(d->path);
@@ -267,6 +271,7 @@ walkto(Monster *m, Point p, int wait)
 	AIState *i;
 	d = mallocz(sizeof(*d), 1);
 	d->dst = p;
+	d->last = m->pt;
 	d->wait = wait;
 	assert(d != nil);
 	i = mkstate("walk", m, d, nil, walktoexec, walktoexit);
@@ -313,6 +318,7 @@ attackexec(AIState *a)
 			d->wd->dst = mt->pt;
 		}
 		d->wd->wait = 2;
+		d->wd->last = m->pt;
 		if(walktoinner(d->w) < 0){
 			a = mpopstate(m);
 			freestate(a);

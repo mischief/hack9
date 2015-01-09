@@ -27,7 +27,9 @@ monst(int idx)
 	m->mvr = md->mvr;
 	m->mvp = nrand(m->mvr);
 	m->hp = md->maxhp;
+	m->maxhp = md->maxhp;
 	m->ac = md->def;
+	m->xpl = md->basexpl;
 	m->md = md;
 
 	incref(&m->ref);
@@ -80,10 +82,14 @@ mupdate(Monster *m)
 
 		/* gain some hp if you aren't dead. */
 		if((m->flags & Mdead) == 0)
-		if(m->hp < m->md->maxhp){
-			m->hp += (double)m->md->maxhp/100.0;
-			if(m->hp > m->md->maxhp)
-				m->hp = m->md->maxhp;
+		if(m->hp < m->maxhp){
+			/* below half, 2%. above, 0.5%. */
+			if(m->hp < m->maxhp/2)
+				m->hp += 1.0 + (double)m->maxhp/50.0;
+			else
+				m->hp += (double)m->maxhp/200.0;
+			if(m->hp > m->maxhp)
+				m->hp = m->maxhp;
 		}
 	}
 
@@ -116,17 +122,40 @@ mpopstate(Monster *m)
 	return a;
 }
 
+/* determines what happens when a monster gets some xp */
+static void
+maddxp(Monster *m, long xp)
+{
+	long hpgain, last;
+
+	dbg("%s get %ld xp total %ld next %ld", m->md->name, xp, m->xp, xpcalc(m->xpl));
+
+	last = m->xpl;
+	m->xp += xp;
+	while(m->xp >= xpcalc(m->xpl)){
+		m->xpl++;
+		hpgain = 1 + roll(1, 8);
+		m->maxhp += hpgain;
+		m->hp += hpgain*2;
+	}
+	
+	if(m->xpl > last)
+		if(nearyou(m->pt))
+			good("the %s becomes level %d!", m->md->name, m->xpl);
+}
+
 static int
 mattack(Monster *m, Monster *mt)
 {
-	int hit, crit, dmg;
+	int hit, crit, dmg, xp;
 	hit = roll(1, 100);
 	if(hit < 10+abs(mt->ac-10)*2){
-		warn("the %s misses the %s!", m->md->name, mt->md->name);
+		if(nearyou(m->pt))
+			warn("the %s misses the %s!", m->md->name, mt->md->name);
 		return 0;
 	}
 
-	dmg = roll(m->md->atk, m->md->rolls);
+	dmg = roll(m->md->rolls, m->md->atk);
 
 	if(dmg && mt->ac < 0){
 		dmg -= 1+nrand(-mt->ac);
@@ -137,9 +166,11 @@ mattack(Monster *m, Monster *mt)
 	crit = roll(1, 5);
 	if(crit == 1){
 		dmg *= 2;
-		warn("the %s critically strikes the %s for %d!", m->md->name, mt->md->name, dmg);
+		if(nearyou(m->pt))
+			warn("the %s critically strikes the %s for %d!", m->md->name, mt->md->name, dmg);
 	} else {
-		warn("the %s hits the %s for %d!", m->md->name, mt->md->name, dmg);
+		if(nearyou(m->pt))
+			msg("the %s hits the %s for %d.", m->md->name, mt->md->name, dmg);
 	}
 
 	mt->hp -= dmg;
@@ -148,7 +179,22 @@ mattack(Monster *m, Monster *mt)
 		mt->hp = 0;
 		mt->flags = Mdead;
 		m->kills++;
-		bad("the %s kills the %s!", m->md->name, mt->md->name);
+
+		xp = 10+10*pow(mt->xpl, 1.75);
+
+		if(nearyou(m->pt))
+			bad("the %s kills the %s, and gains %ld xp.", m->md->name, mt->md->name, xp);
+		
+		/* gain some xp */
+		maddxp(m, xp);
+
+		/* gain 1/4 your target's max hp */
+		if(m->hp < m->maxhp){
+			m->hp += (double)mt->maxhp/4.0;
+			if(m->hp > m->maxhp)
+				m->hp = m->maxhp;
+		}
+
 		return 1;
 	}
 
@@ -179,7 +225,7 @@ maction(Monster *m, int what, Point where)
 				targ->unit = 0;
 			}
 			return 0;
-		} else if(!hasflagat(m->l, where, Fblocked)){
+		} else if(!hasflagat(m->l, where, Fblocked|Fhasmonster)){
 			/* move */
 			cur = tileat(m->l, m->pt);
 			setflagat(m->l, where, (Fhasmonster));
@@ -190,6 +236,11 @@ maction(Monster *m, int what, Point where)
 			cur->monst = nil;
 
 			m->pt = where;
+
+			if(isyou(m) && hasflagat(m->l, where, Fportal)){
+				warn("you see a %s here.", targ->portal->name);
+			}
+
 			return 1;
 		}
 		break;
@@ -202,7 +253,7 @@ maction(Monster *m, int what, Point where)
 			m = cur->monst;
 			cur->monst = nil;
 			if(cur->portal->to == nil){
-				if((cur->portal->to = genlevel(nrand(20)+20, nrand(20)+20, nrand(3)+1)) == nil)
+				if((cur->portal->to = genlevel(nrand(20)+50, nrand(20)+10, nrand(3)+1)) == nil)
 					sysfatal("genlevel: %r");
 
 				cur->portal->pt = cur->portal->to->up;
@@ -229,5 +280,12 @@ maction(Monster *m, int what, Point where)
 
 	/* bad move. */
 	return -1;
+}
+
+/* return the amount of xp required to gain a level */
+long
+xpcalc(long level)
+{
+	return 20 + (10 * (2*level) * (level+pow(0.95, level)));
 }
 

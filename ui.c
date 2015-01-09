@@ -44,20 +44,40 @@ struct Msg
 typedef struct UI UI;
 struct UI
 {
+	/* current ui size */
 	int uisz;
+
+	/* colors */
 	Image **cols;
+
+	/* mouse, keyboard */
 	Mousectl *mc;
 	Keyboardctl *kc;
+
+	/* log chan */
 	Channel *msgc;
+
+	/* linked list of current msgs */
 	Msg *msg;
 	int nmsg;
+
+	/* tileset */
 	Tileset *tiles;
+
+	/* level view rectangle, in tiles */
 	Rectangle viewr;
+	/* ui rectangle, in pixels */
 	Rectangle uir;
 	Point camp;
-	int autoidle;
+
+	/* timer tick, see /^tickproc */
 	Channel *tickcmd;
 	Channel *tick;
+
+	/* should auto-move? */
+	int autoidle;
+	/* show far away messages? */
+	int farmsg;
 } ui;
 
 
@@ -115,7 +135,7 @@ uiinit(char *name)
 
 	proccreate(tickproc, nil, 4096);
 
-	if((ui.msgc = chancreate(sizeof(Msg*), 100)) == nil)
+	if((ui.msgc = chancreate(sizeof(Msg*), 1000)) == nil)
 		sysfatal("chancreate: %r");
 
 	tileset = getenv("tileset");
@@ -223,8 +243,7 @@ static void
 drawlevel(Level *l, Tileset *ts, Rectangle r)
 {
 	int what;
-	ulong maxhp;
-	double hp;
+	double hp, maxhp;
 	char buf[16];
 	Point p, p2, sp, bot;
 	Image *c;
@@ -249,10 +268,10 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 				else if(t->feat)
 					what = t->feat;
 				drawtile(ts, screen, sp, what);
-				if(t->monst != nil && t->monst != player){
+				if(t->monst != nil){
 					m = t->monst;
-					hp = m->hp, maxhp = m->md->maxhp;
-					snprint(buf, sizeof(buf), "%.0f/%lud HP", hp, maxhp);
+					hp = m->hp, maxhp = m->maxhp;
+					snprint(buf, sizeof(buf), "%.0f/%.0f HP", hp, maxhp);
 					if(hp > (maxhp/4)*3)
 						c = ui.cols[CGREEN];
 					else if(hp > maxhp/2)
@@ -263,6 +282,9 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 						c = ui.cols[CRED];
 					p2 = addpt(sp, bot);
 					string(screen, p2, c, ZP, smallfont, buf);
+					p2.y -= smallfont->height;
+					snprint(buf, sizeof(buf), "L%ld", m->xpl);
+					string(screen, p2, display->white, ZP, smallfont, buf);
 					/* debugging the ai state */
 					if(debug){
 						if(m->ai != nil){
@@ -281,8 +303,7 @@ static void
 drawui(Rectangle r)
 {
 	int i, logline, sw;
-	ulong maxhp;
-	double hp;
+	double hp, maxhp;
 	Point p;
 	Image *c;
 	char buf[256];
@@ -322,8 +343,12 @@ drawui(Rectangle r)
 	p = string(screen, p, display->white, ZP, font, buf);
 	p.x += sw;
 
-	hp = player->hp, maxhp = player->md->maxhp;
-	snprint(buf, sizeof(buf), "%.0f/%lud HP", hp, maxhp);
+	snprint(buf, sizeof(buf), "L:%ld XP:%ld/%ld", player->xpl, player->xp, xpcalc(player->xpl));
+	p = string(screen, p, display->white, ZP, font, buf);
+	p.x += sw;
+
+	hp = player->hp, maxhp = player->maxhp;
+	snprint(buf, sizeof(buf), "HP:%.0f/%.0f", hp, maxhp);
 	if(hp > (maxhp/4)*3)
 		c = ui.cols[CGREEN];
 	else if(hp > maxhp/2)
@@ -335,7 +360,7 @@ drawui(Rectangle r)
 	p = string(screen, p, c, ZP, font, buf);
 	p.x += sw;
 
-	snprint(buf, sizeof(buf), "%ld AC", player->ac);
+	snprint(buf, sizeof(buf), "AC:%ld", player->ac);
 	p = string(screen, p, display->white, ZP, font, buf);
 	p.x += sw;
 
@@ -405,6 +430,9 @@ dbgmenu(int idx, char **s)
 	case 1:
 		*s = "revive and gain max hp";
 		return 'r';
+	case 2:
+		*s = "toggle far messages";
+		return 'f';
 	}
 	return Runemax;
 }
@@ -483,7 +511,7 @@ uiexec(AIState *ai)
 			if(c == 0x7f)
 				threadexitsall(nil);
 
-			if(gameover > 0){
+			if(gameover > 0 && gameover++ < 2){
 				bad("you are dead. game over, man.");
 			}
 
@@ -515,11 +543,14 @@ uiexec(AIState *ai)
 
 					incref(&player->ref);
 					player->flags &= ~Mdead;
-					player->hp = player->md->maxhp;
+					player->hp = player->maxhp;
 					setflagat(player->l, player->pt, Fhasmonster);
 					tileat(player->l, player->pt)->monst = player;
 					tileat(player->l, player->pt)->unit = player->type;
 					gameover = 0;
+					break;
+				case 2:
+					farmsg = !farmsg;
 					break;
 				}
 				redraw(&ui, 0, 0);

@@ -10,15 +10,13 @@ typedef struct Camera Camera;
 
 /* hack9.c */
 extern int debug;
+extern int farmsg;
 extern Monster *player;
 extern char *user;
 extern char *home;
 extern long turn;
-void msg(char *fmt, ...);
-void good(char *fmt, ...);
-void warn(char *fmt, ...);
-void bad(char *fmt, ...);
-void dbg(char *fmt, ...);
+int isyou(Monster *m);
+int nearyou(Point p);
 
 typedef void (*AIFun)(AIState *);
 
@@ -65,12 +63,13 @@ void drawtile(Tileset *t, Image *dst, Point p, int i);
 struct MonsterData
 {
 	char *name;
+	uint basexpl;
 	char align;
 	uint mvr;
 	uint maxhp;
 	long def;
-	uint atk;
 	uint rolls;
+	uint atk;
 };
 
 extern MonsterData monstdata[1200];
@@ -114,12 +113,19 @@ struct Monster
 
 	/* current hp */
 	double hp;
+	/* maximum hp */
+	double maxhp;
 
 	/* armor class */
 	long ac;
 
 	/* kill count */
 	long kills;
+
+	/* experience level */
+	long xpl;
+	/* experience gained */
+	long xp;
 
 	/* flags */
 	u32int flags;
@@ -139,13 +145,17 @@ int mupdate(Monster *m);
 void mpushstate(Monster *m, AIState *a);
 AIState *mpopstate(Monster *m);
 int maction(Monster *m, int what, Point where);
+long xpcalc(long level);
 
 /* well known tiles, also indexes into monstdata */
 enum
 {
 	/* monsters */
 	TLARGECAT	= 39,
+	TGNOME		= 166,
+	TGNOMELORD	= 167,
 	TGWIZARD	= 168,
+	TGNOMEKING	= 169,
 	TLICH		= 185,
 	TSOLDIER	= 280,
 	TSERGEANT	= 281,
@@ -168,6 +178,7 @@ enum
 
 struct Portal
 {
+	char name[32];
 	/* where it takes us to */
 	Level *to;
 	/* location in to */
@@ -237,6 +248,7 @@ struct Level
 	Spawn	spawns[10];
 };
 
+/* level.c */
 Level *genlevel(int width, int height, int type);
 void freelevel(Level *l);
 Tile *tileat(Level *l, Point p);
@@ -244,7 +256,6 @@ Tile *tileat(Level *l, Point p);
 #define hasflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) & (F))
 #define setflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) |= (F))
 #define clrflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) &= ~(F))
-Point *lneighbor(Level *l, Point p, int *n);
 
 struct Camera
 {
@@ -267,6 +278,11 @@ int manhattan(Point cur, Point targ);
 int pathfind(Level *l, Point start, Point end, Point **path, int not);
 
 /* ui.c */
+void msg(char *fmt, ...);
+void good(char *fmt, ...);
+void warn(char *fmt, ...);
+void bad(char *fmt, ...);
+void dbg(char *fmt, ...);
 void uiinit(char *name);
 void uiexec(AIState *ai);
 void uiredraw(int justui);

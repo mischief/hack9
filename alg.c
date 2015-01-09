@@ -1,5 +1,6 @@
 #include <u.h>
 #include <libc.h>
+#include <draw.h>
 #include "alg.h"
 
 Priq*
@@ -92,5 +93,45 @@ priqhas(Priq *q, void *val)
 			return 1;
 	}
 	return 0;
+}
+
+/* von neumann neighborhood */
+Point*
+neighbor(Rectangle in, Point p, int *n)
+{
+	int i, count;
+	Point *neigh, p2, diff[] = { {1, 0}, {0, -1}, {-1, 0}, {0, 1} };
+
+	count = 0;
+	neigh = mallocz(sizeof(Point) * nelem(diff), 1);
+
+	for(i = 0; i < nelem(diff); i++){
+		p2 = addpt(p, diff[i]);
+		if(ptinrect(p2, in)){
+			neigh[count++] = p2;
+		}
+	}
+
+	*n = count;
+	return neigh;
+}
+
+/* fisher-yates shuffle */
+void
+shuffle(void *base, long nel, long width)
+{
+	unsigned char *b, *swap1, *swap2;
+	long i, j, k;
+	b = base;
+	for(i = nel - 1; i > 0; i--){
+		j = nrand(i);
+		swap1 = &b[i*width];
+		swap2 = &b[j*width];
+		for(k = 0; k < width; k++){
+			*swap1 ^= *swap2;
+			*swap2 ^= *swap1;
+			*swap1++ ^= *swap2++;
+		}
+	}
 }
 

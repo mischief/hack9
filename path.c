@@ -45,7 +45,7 @@ pathfind(Level *l, Point start, Point end, Point **path, int not)
 {
 	int i, nneigh, npath;
 	Point *neighborp, pt;
-	PNode *nodes, *p, *neighbor, *head, *tmp, *rev;
+	PNode *nodes, *p, *neigh, *head, *tmp, *rev;
 	Priq *q;
 
 	npath = -1;
@@ -72,21 +72,22 @@ pathfind(Level *l, Point start, Point end, Point **path, int not)
 		if(eqpt(p->pt, end))
 			break;
 
-		neighborp = lneighbor(l, p->pt, &nneigh);
+		neighborp = neighbor(l->r, p->pt, &nneigh);
+		shuffle(neighborp, nneigh, sizeof(Point));
 		for(i = 0; i < nneigh; i++){
 			pt = neighborp[i];
-			neighbor = &nodes[pt.y*l->width + pt.x];
+			neigh = &nodes[pt.y*l->width + pt.x];
 			if(eqpt(pt, end) || (flagat(l, pt) & not) == 0)
-			if(!neighbor->closed){
-				if(!priqhas(q, neighbor)){
-					neighbor->pt = pt;
-					neighbor->G = p->G + ORTHOCOST;
-					neighbor->H = manhattan(pt, end);
-					priqpush(q, neighbor, pnodecmp);
-					neighbor->parent = p;
-				} else if(p->G + ORTHOCOST < neighbor->G){
-					neighbor->G = p->G + ORTHOCOST;
-					neighbor->parent = p;
+			if(!neigh->closed){
+				if(!priqhas(q, neigh)){
+					neigh->pt = pt;
+					neigh->G = p->G + ORTHOCOST;
+					neigh->H = manhattan(pt, end);
+					priqpush(q, neigh, pnodecmp);
+					neigh->parent = p;
+				} else if(p->G + ORTHOCOST < neigh->G){
+					neigh->G = p->G + ORTHOCOST;
+					neigh->parent = p;
 				}
 			}
 		}

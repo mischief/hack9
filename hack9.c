@@ -12,10 +12,25 @@ enum
 };
 
 int debug;
+int farmsg = 0;
 Monster *player;
 char *user;
 char *home;
 long turn = 0;
+
+int
+isyou(Monster *m)
+{
+	return m == player;
+}
+
+int
+nearyou(Point p)
+{
+	if(farmsg)
+		return 1;
+	return manhattan(player->pt, p) < ORTHOCOST*5;
+}
 
 /*
  * sort monsters for movement order.
@@ -40,7 +55,7 @@ monsort(void *a, void *b)
 	return sa < sb;
 }
 
-void
+static void
 movemons(void)
 {
 	Point p;
@@ -81,7 +96,8 @@ movemons(void)
 
 	priqfree(tomove);
 }
-void
+
+static void
 usage(void)
 {
 	fprint(2, "usage: %s [-d]", argv0);
@@ -142,7 +158,7 @@ threadmain(int argc, char *argv[])
 
 	if(debug > 0){
 		player->hp = 500;
-		player->md->maxhp = 500;
+		player->maxhp = 500;
 	}
 
 	uiredraw(0);
