@@ -130,10 +130,11 @@ threadmain(int argc, char *argv[])
 
 	uiinit(argv0);
 
-	snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, "monster.ndb");
-	if(monstdbopen(buf) < 0)
-		if(monstdbopen("monster.ndb") < 0)
+	if(!monstdbopen("monster.ndb")){
+		snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, "monster.ndb");
+		if(!monstdbopen(buf))
 			sysfatal("monstdbopen: %r");
+	}
 
 	/* initial level */
 	if(debug > 0){
