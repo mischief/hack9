@@ -4,6 +4,7 @@
 #include <thread.h>
 
 #include "dat.h"
+#include "alg.h"
 
 AIState*
 mkstate(char *name, Monster *m, void *aux, AIFun enter, AIFun exec, AIFun exit)
@@ -87,6 +88,7 @@ idleexec(AIState *a)
 				ys = c.y - yd;
 
 				Point pts[] = { p, Pt(p.x, ys), Pt(xs, p.y), Pt(xs, ys) };
+				shuffle(pts, 4, sizeof(Point));
 				for(i = 0; i < 4; i++){
 					s = pts[i];
 					if(!ptinrect(s, m->l->r))

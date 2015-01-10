@@ -7,7 +7,9 @@ BIN=$home/bin/$objtype
 </sys/src/cmd/mkone
 
 install:V:	$BIN/$TARG
-	cp nethack.32x32 $home/lib/
+	mkdir $home/lib/hack9
+	cp nethack.32x32 $home/lib/hack9
+	cp monster.ndb $home/lib/hack9
 
 $O.alg:	algtest.$O alg.$O
 	$LD -o $target $prereq

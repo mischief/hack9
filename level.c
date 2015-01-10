@@ -108,10 +108,12 @@ redo:
 
 /* create a monster in the idle state */
 static Monster*
-mkmons(Level *l, Point p, int type)
+mkmons(Level *l, Point p, char *type)
 {
 	Monster *m;
-	m = monst(type);
+	m = mbyname(type);
+	if(m == nil)
+		sysfatal("monstbyname: %r");
 	m->l = l;
 	m->pt = p;
 	/* setup ai state */
@@ -121,7 +123,7 @@ mkmons(Level *l, Point p, int type)
 
 /* genmonsters spawns count of type monsters at random places on l. */
 static void
-genmonsters(Level *l, int type, int count)
+genmonsters(Level *l, char *type, int count)
 {
 	int i;
 	Point p;
@@ -133,8 +135,8 @@ genmonsters(Level *l, int type, int count)
 		}while(hasflagat(l, p, Fhasmonster|Fhasfeature|Fblocked));
 
 		t = tileat(l, p);
-		t->unit = type;
 		t->monst = mkmons(l, p, type);
+		t->unit = t->monst->md->tile;
 		setflagat(l, p, Fhasmonster);
 	}
 }
@@ -147,7 +149,7 @@ genmonsters(Level *l, int type, int count)
  * spawns 13 ghosts centered at p on l.
  */
 static void
-several(Level *l, Point *p, int count, int type, int r)
+several(Level *l, Point *p, int count, char *type, int r)
 {
 	int i, j, n;
 	Point *neigh;
@@ -155,8 +157,8 @@ several(Level *l, Point *p, int count, int type, int r)
 	for(i = 0; i < count; i++){
 		if(!hasflagat(l, p[i], Fhasmonster|Fblocked)){
 			t = tileat(l, p[i]);
-			t->unit = type;
 			t->monst = mkmons(l, p[i], type);
+			t->unit = t->monst->md->tile;
 			setflagat(l, p[i], Fhasmonster);
 		}
 		if(r > 0){
@@ -169,10 +171,18 @@ several(Level *l, Point *p, int count, int type, int r)
 	}
 }
 
-static void addspawn(Level *l, Point p, int what, int freq)
+static void addspawn(Level *l, Point p, char *what, int freq)
 {
-	if(l->nspawns < nelem(l->spawns)-1)
-		l->spawns[l->nspawns++] = (Spawn){p, what, freq};
+	Spawn sp;
+
+	if(l->nspawns < nelem(l->spawns)-1){
+		sp.pt = p;
+		strcpy(sp.what, what);
+		sp.freq = freq;
+		l->spawns[l->nspawns++] = sp;
+		tileat(l, p)->feat = TSPAWN;
+		setflagat(l, p, Fhasfeature);
+	}
 }
 
 static void
@@ -198,9 +208,9 @@ levelexec(AIState *a)
 				if(hasflagat(l, np, Fhasmonster)){
 					t = tileat(l, np);
 					m = t->monst;
-					md = &monstdata[l->spawns[i].what];
-					if(m->type != l->spawns[i].what && abs(m->align - md->align) > 15){
-						several(l, &np, 1, l->spawns[i].what, 1);
+					md = mdbyname(l->spawns[i].what);
+					if(strcmp(m->md->name, l->spawns[i].what) != 0 && abs(m->align - md->align) > 15){
+						several(l, &p, 1, l->spawns[i].what, 2);
 					}
 				}
 			}
@@ -273,8 +283,8 @@ gen(Level *l, int type)
 		drunken(l, TTREE, 3, 3, 3);
 		clear(l, pup, 1);
 		clear(l, pdown, 1);
-		several(l, &l->down, 1, TLICH, 1);
-		several(l, &l->down, 1, TGWIZARD, 1);
+		several(l, &l->down, 1, "lich", 1);
+		several(l, &l->down, 1, "gnome wizard", 1);
 		break;
 		break;
 	case 1:
@@ -287,28 +297,28 @@ gen(Level *l, int type)
 				return -1;
 		}while(!ptinrect(p, in) || manhattan(p, l->down) < DIST || manhattan(p, l->up) < DIST || hasflagat(l, p, Fblocked|Fhasmonster|Fhasfeature));
 		clear(l, p, 2);
-		several(l, &p, 1, TCAPTAIN, 0);
-		several(l, &p, 1, TLIEUTENANT, 1);
-		addspawn(l, p, TSOLDIER, 37);
-		addspawn(l, p, TSERGEANT, 51);
-		addspawn(l, p, TLIEUTENANT, 97);
-		addspawn(l, p, TCAPTAIN, 131);
+		several(l, &p, 1, "captain", 0);
+		several(l, &p, 1, "lieutenant", 1);
+		addspawn(l, p, "soldier", 37);
+		addspawn(l, p, "sergeant", 51);
+		addspawn(l, p, "lieutenant", 97);
+		addspawn(l, p, "captain", 131);
 		do{
 			p2 = (Point){nrand(l->width), nrand(l->height)};
 			if(try++ > 10)
 				return -1;
 		}while(!ptinrect(p2, in) || manhattan(p, p2) < DIST || manhattan(p, p2) > DIST*2 || manhattan(p2, l->down) < DIST || manhattan(p2, l->up) < DIST || hasflagat(l, p2, Fblocked|Fhasmonster|Fhasfeature));
 		clear(l, p2, 2);
-		several(l, &p2, 1, TGNOMEKING, 0);
-		several(l, &p2, 1, TGWIZARD, 1);
-		addspawn(l, p2, TGNOME, 11);
-		addspawn(l, p2, TGNOMELORD, 25);
-		addspawn(l, p2, TGWIZARD, 73);
-		addspawn(l, p2, TGNOMEKING, 131);
+		several(l, &p2, 1, "gnome king", 0);
+		several(l, &p2, 1, "gnome wizard", 1);
+		addspawn(l, p2, "gnome", 11);
+		addspawn(l, p2, "gnome lord", 25);
+		addspawn(l, p2, "gnome wizard", 73);
+		addspawn(l, p2, "gnome king", 131);
 
 		/* don't start empty */
-		genmonsters(l, TGNOMELORD, space/128);
-		genmonsters(l, TSERGEANT, space/128);
+		genmonsters(l, "gnome lord", space/128);
+		genmonsters(l, "sergeant", space/128);
 		break;
 	case 2:
 		space += drunken(l, TGRAVE, 2, 4, 4);
@@ -320,44 +330,41 @@ gen(Level *l, int type)
 				return -1;
 		}while(!ptinrect(p, in) || manhattan(p, l->down) < DIST || manhattan(p, l->up) < DIST || hasflagat(l, p, Fblocked|Fhasmonster|Fhasfeature));
 		clear(l, p, 2);
-		addspawn(l, p, TLICH, 31);
-		addspawn(l, p, TGHOST, 5);
+		addspawn(l, p, "lich", 31);
+		addspawn(l, p, "ghost", 5);
 		do{
 			p2 = (Point){nrand(l->width), nrand(l->height)};
 			if(try++ > 10)
 				return -1;
 		}while(!ptinrect(p2, in) || manhattan(p, p2) < DIST*3 || manhattan(p2, l->down) < DIST || manhattan(p2, l->up) < DIST || hasflagat(l, p2, Fblocked|Fhasmonster|Fhasfeature));
 		clear(l, p2, 2);
-		several(l, &p2, 1, TGNOMEKING, 0);
-		several(l, &p2, 1, TGWIZARD, 1);
-		addspawn(l, p2, TGNOME, 11);
-		addspawn(l, p2, TGNOMELORD, 25);
-		addspawn(l, p2, TGWIZARD, 73);
-		addspawn(l, p2, TGNOMEKING, 131);
+		several(l, &p2, 1, "gnome king", 0);
+		several(l, &p2, 1, "gnome wizard", 1);
+		addspawn(l, p2, "gnome", 11);
+		addspawn(l, p2, "gnome lord", 25);
+		addspawn(l, p2, "gnome wizard", 37);
+		addspawn(l, p2, "gnome king", 53);
 
-		genmonsters(l, TGHOST, space/64);
-		genmonsters(l, TGNOME, space/64);
+		genmonsters(l, "ghost", space/64);
+		genmonsters(l, "gnome", space/64);
 		break;
 	case 3:
-		drunken(l, TLAVA, 2, 1, 1);
+		space += drunken(l, TLAVA, 2, 1, 1);
 		clear(l, pup, 2);
 		clear(l, pdown, 2);
 		do{
 			p = (Point){nrand(l->width), nrand(l->height)};
-		}while(hasflagat(l, p, Fblocked|Fhasfeature));
-		addspawn(l, p, TLARGECAT, 11);
+		}while(!ptinrect(p, in) || hasflagat(l, p, Fblocked|Fhasfeature));
+		clear(l, p, 2);
+		addspawn(l, p, "large cat", 67);
 		do{
 			p = (Point){nrand(l->width), nrand(l->height)};
-		}while(hasflagat(l, p, Fblocked|Fhasfeature));
-		addspawn(l, p, TLARGECAT, 13);
-		do{
-			p = (Point){nrand(l->width), nrand(l->height)};
-		}while(hasflagat(l, p, Fblocked|Fhasfeature));
-		addspawn(l, p, TGWIZARD, 9);
-		do{
-			p = (Point){nrand(l->width), nrand(l->height)};
-		}while(hasflagat(l, p, Fblocked|Fhasfeature));
-		addspawn(l, p, TGWIZARD, 15);
+		}while(!ptinrect(p, in) || hasflagat(l, p, Fblocked|Fhasfeature));
+		clear(l, p, 2);
+		addspawn(l, p, "gnome lord", 27);
+
+		genmonsters(l, "large cat", space/64);
+		genmonsters(l, "gnome lord", space/64);
 		break;
 	}
 

@@ -107,6 +107,7 @@ usage(void)
 void
 threadmain(int argc, char *argv[])
 {
+	char buf[256];
 	/* of viewport, in size of tiles */
 	Tile *t;
 	Level *level;
@@ -129,6 +130,11 @@ threadmain(int argc, char *argv[])
 
 	uiinit(argv0);
 
+	snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, "monster.ndb");
+	if(monstdbopen(buf) < 0)
+		if(monstdbopen("monster.ndb") < 0)
+			sysfatal("monstdbopen: %r");
+
 	/* initial level */
 	if(debug > 0){
 		if((level = genlevel(11, 11, 0)) == nil)
@@ -139,7 +145,7 @@ threadmain(int argc, char *argv[])
 	}
 
 	/* the player */
-	player = monst(TWIZARD);
+	player = mbyname("wizard");
 	if(player == nil)
 		sysfatal("monst: %r");
 

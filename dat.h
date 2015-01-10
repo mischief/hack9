@@ -8,6 +8,12 @@ typedef struct MonsterData MonsterData;
 typedef struct Monster Monster;
 typedef struct Camera Camera;
 
+/* sizes */
+enum
+{
+	SZMONNAME = 32,
+};
+
 /* hack9.c */
 extern int debug;
 extern int farmsg;
@@ -62,17 +68,19 @@ void drawtile(Tileset *t, Image *dst, Point p, int i);
 
 struct MonsterData
 {
-	char *name;
-	uint basexpl;
-	char align;
-	uint mvr;
-	uint maxhp;
-	long def;
-	uint rolls;
-	uint atk;
-};
+	char name[SZMONNAME];
+	/* offset into tileset */
+	int tile;
 
-extern MonsterData monstdata[1200];
+	/* base experience level */
+	int basexpl;
+	char align;
+	int mvr;
+	int maxhp;
+	int def;
+	int rolls;
+	int atk;
+};
 
 /* possible moves */
 enum
@@ -93,8 +101,6 @@ struct Monster
 {
 	/* references */
 	Ref ref;
-	/* type */
-	int type;
 
 	/* current level */
 	Level *l;
@@ -105,11 +111,11 @@ struct Monster
 	char align;
 
 	/* move rate */
-	long mvr;
+	int mvr;
 	/* move points */
-	long mvp;
+	int mvp;
 	/* turn counter */
-	long turns;
+	int turns;
 
 	/* current hp */
 	double hp;
@@ -117,15 +123,15 @@ struct Monster
 	double maxhp;
 
 	/* armor class */
-	long ac;
+	int ac;
 
 	/* kill count */
-	long kills;
+	int kills;
 
 	/* experience level */
-	long xpl;
+	int xpl;
 	/* experience gained */
-	long xp;
+	int xp;
 
 	/* flags */
 	u32int flags;
@@ -139,15 +145,17 @@ struct Monster
 };
 
 /* monst.c */
-Monster *monst(int idx);
+int monstdbopen(char *file);
+MonsterData *mdbyname(char *monster);
+Monster *mbyname(char *monster);
 void mfree(Monster *m);
 int mupdate(Monster *m);
 void mpushstate(Monster *m, AIState *a);
 AIState *mpopstate(Monster *m);
 int maction(Monster *m, int what, Point where);
-long xpcalc(long level);
+int xpcalc(int level);
 
-/* well known tiles, also indexes into monstdata */
+/* well known tiles, indexes into tileset */
 enum
 {
 	/* monsters */
@@ -173,6 +181,7 @@ enum
 	TWATER		= 860,
 	TICE		= 861,
 	TLAVA		= 862,
+	TSPAWN		= 888,
 	TPORTAL		= 891,
 };
 
@@ -190,7 +199,7 @@ struct Spawn
 	/* where spawn occurs */
 	Point pt;
 	/* what to spawn */
-	int what;
+	char what[SZMONNAME];
 	/* frequency of spawn, modulo turns */
 	int freq;
 };
@@ -300,6 +309,7 @@ enum
 
 extern Point cardinals[];
 int roll(int count, int sides);
+int parseroll(char *str, int *count, int *sides);
 int min(int a, int b);
 int max(int a, int b);
 

@@ -142,9 +142,9 @@ uiinit(char *name)
 	if(tileset == nil)
 		tileset = strdup("nethack.32x32");
 
-	snprint(buf, sizeof(buf), "%s/lib/%s", home, tileset);
-	if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil)
-		if((ui.tiles = opentile(buf, 32, 32)) == nil)
+	snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, tileset);
+	if((ui.tiles = opentile(buf, 32, 32)) == nil)
+		if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil)
 			sysfatal("opentile: %r");
 	free(tileset);
 
@@ -283,7 +283,7 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 					p2 = addpt(sp, bot);
 					string(screen, p2, c, ZP, smallfont, buf);
 					p2.y -= smallfont->height;
-					snprint(buf, sizeof(buf), "L%ld", m->xpl);
+					snprint(buf, sizeof(buf), "L%d", m->xpl);
 					string(screen, p2, display->white, ZP, smallfont, buf);
 					/* debugging the ai state */
 					if(debug){
@@ -334,7 +334,7 @@ drawui(Rectangle r)
 	p = string(screen, p, display->white, ZP, font, buf);
 	p.x += sw*2;
 
-	snprint(buf, sizeof(buf), "%ld kills", player->kills);
+	snprint(buf, sizeof(buf), "%d kills", player->kills);
 	p = string(screen, p, display->white, ZP, font, buf);
 
 	p.x = r.min.x;
@@ -343,7 +343,7 @@ drawui(Rectangle r)
 	p = string(screen, p, display->white, ZP, font, buf);
 	p.x += sw;
 
-	snprint(buf, sizeof(buf), "L:%ld XP:%ld/%ld", player->xpl, player->xp, xpcalc(player->xpl));
+	snprint(buf, sizeof(buf), "L:%d XP:%d/%d", player->xpl, player->xp, xpcalc(player->xpl));
 	p = string(screen, p, display->white, ZP, font, buf);
 	p.x += sw;
 
@@ -360,7 +360,7 @@ drawui(Rectangle r)
 	p = string(screen, p, c, ZP, font, buf);
 	p.x += sw;
 
-	snprint(buf, sizeof(buf), "AC:%ld", player->ac);
+	snprint(buf, sizeof(buf), "AC:%d", player->ac);
 	p = string(screen, p, display->white, ZP, font, buf);
 	p.x += sw;
 
@@ -546,7 +546,7 @@ uiexec(AIState *ai)
 					player->hp = player->maxhp;
 					setflagat(player->l, player->pt, Fhasmonster);
 					tileat(player->l, player->pt)->monst = player;
-					tileat(player->l, player->pt)->unit = player->type;
+					tileat(player->l, player->pt)->unit = player->md->tile;
 					gameover = 0;
 					break;
 				case 2:

@@ -2,27 +2,157 @@
 #include <libc.h>
 #include <draw.h>
 #include <thread.h>
+#include <bio.h>
+#include <ndb.h>
 
 #include "dat.h"
 
-Monster*
-monst(int idx)
+enum
 {
-	Monster *m;
+	MONNAME		= 0,
+	MONTILE,
+	MONXPL,
+	MONALIGN,
+	MONMVRATE,
+	MONHP,
+	MONAC,
+	MONATK,
+};
+
+static char *monstdbcmd[] = {
+[MONNAME]	"monster",
+[MONTILE]	"tile",
+[MONXPL]	"xpl",
+[MONALIGN]	"align",
+[MONMVRATE]	"mvr",
+[MONHP]		"hp",
+[MONAC]		"ac",
+[MONATK]	"atk",
+};
+
+static Ndb *monstdb;
+
+int
+monstdbopen(char *file)
+{
+	monstdb = ndbopen(file);
+	if(monstdb == nil)
+		return 0;
+	return 1;
+}
+
+typedef struct mdcache mdcache;
+struct mdcache
+{
 	MonsterData *md;
+	mdcache *next;
+};
 
-	if(idx < 0 || idx > nelem(monstdata))
-		goto missing;
+static mdcache *monstcache = nil;
 
-	md = &monstdata[idx];
-	if(md->name == nil)
+/* TODO: sanity checks */
+static int
+mdaddattr(MonsterData *md, int type, char *attr)
+{
+	switch(type){
+	case MONNAME:
+		strncpy(md->name, attr, sizeof(md->name)-1);
+		md->name[sizeof(md->name)-1] = 0;
+		break;
+	case MONTILE:
+		md->tile = atol(attr);
+	case MONXPL:
+		md->basexpl = atol(attr);
+		break;
+	case MONALIGN:
+		md->align = (char)atol(attr);
+		break;
+	case MONMVRATE:
+		md->mvr = atol(attr);
+		break;
+	case MONHP:
+		md->maxhp = atol(attr);
+		break;
+	case MONAC:
+		md->def = atol(attr);
+		break;
+	case MONATK:
+		if(!parseroll(attr, &md->atk, &md->rolls)){
+			werrstr("bad roll '%s'", attr);
+			return 0;
+		}
+		break;
+	default:
+		return 0;
+	}
+
+	return 1;
+}
+
+MonsterData*
+mdbyname(char *monster)
+{
+	int i;
+	Ndbtuple *t, *nt;
+	Ndbs search;
+	MonsterData *md;
+	mdcache *mdc;
+
+	/* cached? */
+	for(mdc = monstcache; mdc != nil; mdc = mdc->next){
+		if(strcmp(monster, mdc->md->name) == 0){
+			return mdc->md;
+		}
+	}
+
+	t = ndbsearch(monstdb, &search, "monster", monster);
+	if(t == nil)
+		return nil;
+
+	md = mallocz(sizeof(MonsterData), 1);
+	assert(md != nil);
+
+	for(nt = t; nt != nil; nt = nt->entry){
+		for(i = 0; i < nelem(monstdbcmd); i++){
+			if(strcmp(nt->attr, monstdbcmd[i]) == 0){
+				if(!mdaddattr(md, i, nt->val))
+					sysfatal("bad monster value '%s=%s': %r", nt->attr, nt->val);
+				goto okattr;
+			}
+		}
+		sysfatal("unknown monster attribute '%s'", nt->attr);
+okattr:
+		continue;
+	}
+
+	mdc = mallocz(sizeof(mdcache), 1);
+	assert(mdc != nil);
+
+	if(monstcache == nil){
+		monstcache = mdc;
+		monstcache->md = md;
+	} else {
+		mdc->md = md;
+		mdc->next = monstcache;
+		monstcache = mdc;
+	}
+
+	return md;
+}
+
+Monster*
+mbyname(char *monster)
+{
+	MonsterData *md;
+	Monster *m;
+
+	md = mdbyname(monster);
+	if(md == nil)
 		goto missing;
 
 	m = mallocz(sizeof(Monster), 1);
-	if(m == nil)
-		return nil;
+	assert(m != nil);
 
-	m->type = idx;
 	m->align = md->align;
 	m->mvr = md->mvr;
 	m->mvp = nrand(m->mvr);
@@ -30,13 +160,14 @@ monst(int idx)
 	m->maxhp = md->maxhp;
 	m->ac = md->def;
 	m->xpl = md->basexpl;
+
 	m->md = md;
 
 	incref(&m->ref);
-	return m;
 
+	return m;
 missing:
-	werrstr("missing monster %d", idx);
+	werrstr("no data for monster '%s'", monster);
 	return nil;
 }
 
@@ -124,9 +255,9 @@ mpopstate(Monster *m)
 
 /* determines what happens when a monster gets some xp */
 static void
-maddxp(Monster *m, long xp)
+maddxp(Monster *m, int xp)
 {
-	long hpgain, last;
+	int hpgain, last;
 
 	dbg("%s get %ld xp total %ld next %ld", m->md->name, xp, m->xp, xpcalc(m->xpl));
 
@@ -283,8 +414,8 @@ maction(Monster *m, int what, Point where)
 }
 
 /* return the amount of xp required to gain a level */
-long
-xpcalc(long level)
+int
+xpcalc(int level)
 {
 	return 20 + (10 * (2*level) * (level+pow(0.95, level)));
 }

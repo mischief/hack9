@@ -19,8 +19,26 @@ roll(int count, int sides)
 	int d;
 	d = 0;
 	while(count--> 0)
-		d += 1+nrand(sides);
+		d += 1+lnrand(sides);
 	return d;
+}
+
+int
+parseroll(char *str, int *count, int *sides)
+{
+	int i;
+	char *f[2];
+
+	if(str == nil || count == nil || sides == nil)
+		return 0;
+
+	i = gettokens(str, f, 2, "d");
+	if(i != 2)
+		return 0;
+
+	*count = atoi(f[0]);
+	*sides = atoi(f[1]);
+	return 1;
 }
 
 int
