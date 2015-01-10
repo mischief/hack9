@@ -142,10 +142,11 @@ uiinit(char *name)
 	if(tileset == nil)
 		tileset = strdup("nethack.32x32");
 
-	snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, tileset);
-	if((ui.tiles = opentile(buf, 32, 32)) == nil)
-		if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil)
+	if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil){
+		snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, tileset);
+		if((ui.tiles = opentile(buf, 32, 32)) == nil)
 			sysfatal("opentile: %r");
+	}
 	free(tileset);
 
 	if((ui.cols = mallocz(CEND * sizeof(Image*), 1)) == nil)
