@@ -10,6 +10,7 @@ OFILES=\
 	camera.$O\
 	hack9.$O\
 	level.$O\
+	levelgen.$O\
 	monst.$O\
 	path.$O\
 	tile.$O\

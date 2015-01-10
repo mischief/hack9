@@ -15,7 +15,13 @@ monster="gnome king"
 
 # undead
 monster="lich"
-	tile=185 xpl=2 align=-50 mvr=6 hp=32 ac=3 atk=3d2
+	tile=185 xpl=11 align=-50 mvr=6 hp=32 ac=0 atk=1d10
+monster="demilich"
+	tile=186 xpl=14 align=-50 mvr=9 hp=48 ac=-2 atk=3d4
+monster="human zombie"
+	tile=246 xpl=4 align=-50 mvr=6 hp=16 ac=8 atk=1d8
+monster="skeleton"
+	tile=250 xpl=12 align=-50 mvr=8 hp=48 ac=4 atk=2d6
 monster="ghost"
 	tile=290 xpl=1 align=-50 mvr=6 hp=16 ac=-5 atk=1d4
 

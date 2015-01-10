@@ -67,7 +67,7 @@ movemons(void)
 	l = player->l;
 
 	/* run ai on level, for spawns etc */
-	if(l->ai->exec != nil)
+	if(l->ai != nil && l->ai->exec != nil)
 		l->ai->exec(l->ai);
 
 	for(p.x = 0; p.x < l->width; p.x++){
@@ -137,13 +137,8 @@ threadmain(int argc, char *argv[])
 	}
 
 	/* initial level */
-	if(debug > 0){
-		if((level = genlevel(11, 11, 0)) == nil)
-			sysfatal("genlevel: %r");
-	} else {
-		if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE, nrand(3)+1)) == nil)
-			sysfatal("genlevel: %r");
-	}
+	if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE, nrand(3)+1)) == nil)
+		sysfatal("genlevel: %r");
 
 	/* the player */
 	player = mbyname("wizard");

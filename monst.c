@@ -342,6 +342,9 @@ maction(Monster *m, int what, Point where)
 {
 	Tile *cur, *targ;
 
+	if(!ptinrect(where, m->l->r))
+		return -1;
+
 	switch(what){
 	default:
 		fprint(2, "unknown move %d\n", what);

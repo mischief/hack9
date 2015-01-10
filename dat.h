@@ -202,6 +202,10 @@ struct Spawn
 	char what[SZMONNAME];
 	/* frequency of spawn, modulo turns */
 	int freq;
+	/* turn counter */
+	int turn;
+	/* spawn baddies when enemy is around? */
+	int istrap;
 };
 
 struct Tile
@@ -260,11 +264,21 @@ struct Level
 /* level.c */
 Level *genlevel(int width, int height, int type);
 void freelevel(Level *l);
+void addspawn(Level *l, Point p, char *what, int freq, int istrap);
 Tile *tileat(Level *l, Point p);
 #define flagat(l, p) (*(l->flags+(p.y*l->width)+p.x))
 #define hasflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) & (F))
 #define setflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) |= (F))
 #define clrflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) &= ~(F))
+
+/* levelgen.c */
+Level *mklevel(int width, int height, int floor);
+void several(Level *l, Point *p, int count, char *type, int r);
+int mkldebug(Level *l);
+int mklforest(Level *l);
+int mklgraveyard(Level *l);
+int mklvolcano(Level *l);
+int mklcastle(Level *l);
 
 struct Camera
 {
