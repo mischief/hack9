@@ -7,7 +7,6 @@ HFILES=\
 OFILES=\
 	ai.$O\
 	alg.$O\
-	camera.$O\
 	hack9.$O\
 	level.$O\
 	levelgen.$O\

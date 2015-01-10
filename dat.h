@@ -6,7 +6,6 @@ typedef struct Spawn Spawn;
 typedef struct Level Level;
 typedef struct MonsterData MonsterData;
 typedef struct Monster Monster;
-typedef struct Camera Camera;
 
 /* sizes */
 enum
@@ -279,17 +278,6 @@ int mklforest(Level *l);
 int mklgraveyard(Level *l);
 int mklvolcano(Level *l);
 int mklcastle(Level *l);
-
-struct Camera
-{
-	Point pos;
-	Rectangle size;
-	Rectangle box;
-};
-
-/* camera.c */
-void ccenter(Camera *c, Point p);
-Point ctrans(Camera *c, Point p);
 
 enum {
 	/* cost to move N S E W */
