@@ -77,7 +77,7 @@ mdaddattr(MonsterData *md, int type, char *attr)
 		md->def = atol(attr);
 		break;
 	case MONATK:
-		if(!parseroll(attr, &md->atk, &md->rolls)){
+		if(!parseroll(attr, &md->rolls, &md->atk)){
 			werrstr("bad roll '%s'", attr);
 			return 0;
 		}
@@ -153,13 +153,18 @@ mbyname(char *monster)
 	m = mallocz(sizeof(Monster), 1);
 	assert(m != nil);
 
+	m->xpl = md->basexpl;
+	if(m->xpl == 0)
+		m->xp = 0;
+	else
+		m->xp = xpcalc(m->xpl-1);
 	m->align = md->align;
 	m->mvr = md->mvr;
 	m->mvp = nrand(m->mvr);
-	m->hp = md->maxhp;
 	m->maxhp = md->maxhp;
+	m->maxhp += roll(m->xpl, 8);
+	m->hp = m->maxhp;
 	m->ac = md->def;
-	m->xpl = md->basexpl;
 
 	m->md = md;
 
@@ -167,7 +172,7 @@ mbyname(char *monster)
 
 	return m;
 missing:
-	werrstr("no data for monster '%s'", monster);
+	werrstr("missing data for monster '%s'", monster);
 	return nil;
 }
 
