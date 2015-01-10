@@ -285,7 +285,7 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 					string(screen, p2, c, ZP, smallfont, buf);
 					p2.y -= smallfont->height;
 					snprint(buf, sizeof(buf), "L%d", m->xpl);
-					string(screen, p2, display->white, ZP, smallfont, buf);
+					stringbg(screen, p2, display->white, ZP, smallfont, buf, display->black, ZP);
 					/* debugging the ai state */
 					if(debug){
 						if(m->ai != nil){
