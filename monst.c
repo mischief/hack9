@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
-#include <draw.h>
 #include <thread.h>
+#include <draw.h>
 #include <bio.h>
 #include <ndb.h>
 
@@ -194,6 +194,9 @@ mfree(Monster *m)
 			freestate(a);
 	}
 
+	ilfree(&m->inv);
+	ilfree(&m->armor);
+
 	free(m);
 }
 
@@ -284,6 +287,9 @@ static int
 mattack(Monster *m, Monster *mt)
 {
 	int hit, crit, dmg, xp;
+	Item *i, *weap;
+	Tile *t;
+
 	hit = roll(1, 100);
 	if(hit < 10+abs(mt->ac-10)*2){
 		if(nearyou(m->pt))
@@ -292,6 +298,11 @@ mattack(Monster *m, Monster *mt)
 	}
 
 	dmg = roll(m->md->rolls, m->md->atk);
+
+	/* factor in weapon damage */
+	weap = m->weapon;
+	if(weap != nil)
+		dmg += roll(weap->id->rolls, weap->id->atk);
 
 	if(dmg && mt->ac < 0){
 		dmg -= 1+nrand(-mt->ac);
@@ -312,17 +323,28 @@ mattack(Monster *m, Monster *mt)
 	mt->hp -= dmg;
 
 	if(mt->hp <= 0){
+		/* poor guy is dead. */
 		mt->hp = 0;
 		mt->flags = Mdead;
-		m->kills++;
+
+		/* drop dead guy's stuff */
+		munwield(mt);
+		mnaked(mt);
+		while(mt->inv.count > 0){
+			i = iltakenth(&mt->inv, 0);
+			t = tileat(mt->l, mt->pt);
+			setflagat(mt->l, mt->pt, Fhasitem);
+			iladd(&t->items, i);
+		}
 
 		xp = 10+10*pow(mt->xpl, 1.75);
-
 		if(nearyou(m->pt))
 			bad("the %s kills the %s, and gains %ld xp.", m->md->name, mt->md->name, xp);
-		
+
 		/* gain some xp */
 		maddxp(m, xp);
+
+		m->kills++;
 
 		/* gain 1/4 your target's max hp */
 		if(m->hp < m->maxhp){
@@ -337,10 +359,12 @@ mattack(Monster *m, Monster *mt)
 	return 0;
 }
 
+/* -1 bad move, 0 didn't move, 1 moved */
 int
 maction(Monster *m, int what, Point where)
 {
 	Tile *cur, *targ;
+	Item *i;
 
 	if(!ptinrect(where, m->l->r))
 		return -1;
@@ -375,6 +399,11 @@ maction(Monster *m, int what, Point where)
 			cur->monst = nil;
 
 			m->pt = where;
+
+			if(isyou(m) && hasflagat(m->l, where, Fhasitem)){
+				i = ilnth(&targ->items, 0);
+				warn("you see %i here.", i);
+			}
 
 			if(isyou(m) && hasflagat(m->l, where, Fportal)){
 				warn("you see a %s here.", targ->portal->name);
@@ -412,6 +441,20 @@ maction(Monster *m, int what, Point where)
 			return 1;
 		}
 		break;
+	case MPICKUP:
+		if(!hasflagat(m->l, where, Fhasitem))
+			return -1;
+		targ = tileat(m->l, where);
+		i = iltakenth(&targ->items, 0);
+		if(i == nil)
+			return -1;
+		if(isyou(m))
+			good("you take the %i.", i);
+		maddinv(m, i);
+		if(targ->items.count == 0)
+			clrflagat(m->l, where, Fhasitem);
+		return 0;
+		break;
 	case MSPECIAL:
 		bad("the special move is broken. please fix me.");
 		break;
@@ -419,6 +462,88 @@ maction(Monster *m, int what, Point where)
 
 	/* bad move. */
 	return -1;
+}
+
+/* wield n'th item in inventory. */
+int
+mwield(Monster *m, int n)
+{
+	Item *i;
+
+	i = nil;
+
+	if(m->weapon != nil)
+		i = m->weapon;
+
+	m->weapon = iltakenth(&m->inv, n);
+	if(m->weapon == nil){
+		m->weapon = i;
+		return 0;
+	}
+
+	if(i != nil)
+		iladd(&m->inv, i);
+
+	return 1;
+}
+
+int
+munwield(Monster *m)
+{
+	if(m->weapon == nil)
+		return 0;
+
+	maddinv(m, m->weapon);
+	m->weapon = nil;
+	return 1;
+}
+
+/* put n'th inventory item on */
+int
+mwear(Monster *m, int n)
+{
+	Item *i;
+
+	i = iltakenth(&m->inv, n);
+	if(i == nil){
+		return 0;
+	}
+
+	iladd(&m->armor, i);
+
+	m->ac -= i->id->ac;
+	return 1;
+}
+
+/* take off all armor */
+void
+mnaked(Monster *m)
+{
+	Item *i;
+
+	while((i = iltakenth(&m->armor, 0)) != nil){
+		m->ac += i->id->ac;
+		iladd(&m->inv, i);
+	}
+}
+
+void
+maddinv(Monster *m, Item *i)
+{
+	Item *it;
+
+	/* dedup item */
+	if(i->id->flags & IFSTACKS){
+		for(it = m->inv.head; it != nil; it = it->next){
+			if(it->id == i->id){
+				it->count += i->count;
+				ifree(i);
+				return;
+			}
+		}
+	}
+
+	iladd(&m->inv, i);
 }
 
 /* return the amount of xp required to gain a level */

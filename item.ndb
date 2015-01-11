@@ -1,0 +1,11 @@
+# item database
+
+# weapons
+item="dagger"
+	tile=411 type=weapon cost=5 weight=5 atk=1d4
+	stacks
+
+# armor
+item="shield"
+	tile=525 type=armor cost=5 weight=10 ac=2
+

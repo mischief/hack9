@@ -8,6 +8,7 @@ OFILES=\
 	ai.$O\
 	alg.$O\
 	hack9.$O\
+	item.$O\
 	level.$O\
 	levelgen.$O\
 	monst.$O\

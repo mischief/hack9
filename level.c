@@ -105,8 +105,11 @@ freelevel(Level *l)
 			t = tileat(l, p);
 			if(hasflagat(l, p, Fhasmonster))
 				mfree(t->monst);
-			if(hasflagat(l, p, Fhasmonster))
+			if(hasflagat(l, p, Fportal))
 				free(t->portal);
+			if(hasflagat(l, p, Fhasitem)){
+				ilfree(&t->items);
+			}
 		}
 	}
 

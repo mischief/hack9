@@ -1,4 +1,7 @@
 typedef struct AIState AIState;
+typedef struct ItemData ItemData;
+typedef struct Item Item;
+typedef struct ItemList ItemList;
 typedef struct Tileset Tileset;
 typedef struct Tile Tile;
 typedef struct Portal Portal;
@@ -44,6 +47,75 @@ AIState* wander(Monster *m);
 AIState* walkto(Monster *m, Point p, int wait);
 AIState* attack(Monster *m, Monster *targ);
 
+enum
+{
+	/* possible item types */
+	IWEAPON	= 0,
+	IARMOR,
+
+	/* item flags */
+	IFSTACKS = 0x1,
+};
+
+struct ItemData
+{
+	/* item name */
+	char name[SZMONNAME];
+	/* type */
+	int type;
+	/* tile of this item */
+	int tile;
+
+	/* $ value */
+	int cost;
+	/* weight */
+	int weight;
+
+	/* if weapon, these are set */
+	int rolls;
+	int atk;
+
+	/* if armor, this is set */
+	int ac;
+
+	/* various flags */
+	int flags;
+};
+
+struct Item
+{
+	Ref ref;
+
+	/* count of items in stack */
+	int count;
+
+	/* has a unique name */
+	char *name;
+
+	/* base data */
+	ItemData *id;
+
+	/* in a list */
+	Item *next;
+};
+
+struct ItemList
+{
+	int count;
+	Item *head, *tail;
+};
+
+/* item.c */
+#pragma varargck type "i" Item*
+int itemdbopen(char *file);
+ItemData *idbyname(char *item);
+Item *ibyname(char *item);
+void ifree(Item *i);
+void ilfree(ItemList *il);
+Item *iltakenth(ItemList *il, int n);
+Item *ilnth(ItemList *il, int n);
+void iladd(ItemList *il, Item *i);
+
 struct Tileset
 {
 	/* of each tile */
@@ -87,6 +159,7 @@ enum
 	MNONE,
 	MMOVE,	/* also attack */
 	MUSE,
+	MPICKUP,
 	MSPECIAL,
 };
 
@@ -139,6 +212,14 @@ struct Monster
 	AIState *ai;
 	AIState *aglobal;
 
+	/* inventory */
+	ItemList inv;
+
+	/* equipped weapon */
+	Item *weapon;
+	/* equipped armor */
+	ItemList armor;
+
 	/* no free */
 	MonsterData *md;
 };
@@ -152,24 +233,16 @@ int mupdate(Monster *m);
 void mpushstate(Monster *m, AIState *a);
 AIState *mpopstate(Monster *m);
 int maction(Monster *m, int what, Point where);
+int mwield(Monster *m, int n);
+int munwield(Monster *m);
+int mwear(Monster *m, int n);
+void mnaked(Monster *m);
+void maddinv(Monster *m, Item *i);
 int xpcalc(int level);
 
 /* well known tiles, indexes into tileset */
 enum
 {
-	/* monsters */
-	TLARGECAT	= 39,
-	TGNOME		= 166,
-	TGNOMELORD	= 167,
-	TGWIZARD	= 168,
-	TGNOMEKING	= 169,
-	TLICH		= 185,
-	TSOLDIER	= 280,
-	TSERGEANT	= 281,
-	TLIEUTENANT	= 282,
-	TCAPTAIN	= 283,
-	TGHOST		= 290,
-	TWIZARD		= 349,
 	/* features */
 	TWALL		= 840,
 	TTREE		= 847,
@@ -214,9 +287,12 @@ struct Tile
 
 	/* has a portal */
 	Portal *portal;
+
+	/* items here */
+	ItemList items;
+
 	/*
 	Feature *feat;
-	Item *items[10];
 	Engraving *engrav;
 	*/
 

@@ -28,7 +28,7 @@ struct KeyMenu
 	/* label printed with the menu */
 	char *label;
 	/* gen is called until it returns Runemax. */
-	Rune (*gen)(int, char**);
+	Rune (*gen)(int, char*, int);
 };
 
 static int menu(Keyboardctl *kc, Mousectl *mc, KeyMenu *km);
@@ -294,6 +294,8 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 							stringbg(screen, sp, display->white, ZP, smallfont, m->aglobal->name, display->black, ZP);
 						}
 					}
+				} else if(hasflagat(l, p, Fhasitem)){
+					drawtile(ts, screen, sp, ilnth(&t->items, 0)->id->tile);
 				}
 			}
 		}
@@ -422,37 +424,51 @@ uiredraw(int justui)
 }
 
 static Rune
-dbgmenu(int idx, char **s)
+dbgmenu(int idx, char *s, int /*sz*/)
 {
 	switch(idx){
 	case 0:
-		*s = "toggle debug flag";
+		strcpy(s, "toggle debug flag");
 		return 'd';
 	case 1:
-		*s = "revive and gain max hp";
+		strcpy(s, "revive and gain max hp");
 		return 'r';
 	case 2:
-		*s = "toggle far messages";
+		strcpy(s, "toggle far messages");
 		return 'f';
 	}
 	return Runemax;
 }
 
 static Rune
-dirmenu(int idx, char **s)
+inventorymenu(int idx, char *s, int sz)
+{
+	Item *i;
+
+	if(player->inv.count <= 0 || idx > player->inv.count-1)
+		return Runemax;
+
+	i = ilnth(&player->inv, idx);
+	snprint(s, sz, "%i", i);
+
+	return idx+'a';
+}
+
+static Rune
+dirmenu(int idx, char *s, int /*sz*/)
 {
 	switch(idx){
 	case WEST:
-		*s = "west";
+		strcpy(s, "west");
 		return 'h';
 	case SOUTH:
-		*s = "south";
+		strcpy(s, "south");
 		return 'j';
 	case NORTH:
-		*s = "north";
+		strcpy(s, "north");
 		return 'k';
 	case EAST:
-		*s = "east";
+		strcpy(s, "east");
 		return 'l';
 	}
 	return Runemax;
@@ -465,6 +481,8 @@ uiexec(AIState *ai)
 	Rune c;
 	Msg *l, *lp;
 	KeyMenu km;
+	Item *item;
+	Tile *t;
 
 	USED(ai);
 
@@ -520,7 +538,8 @@ uiexec(AIState *ai)
 			dir = NODIR;
 
 			switch(c){
-			case 'A':
+			case 'T':
+				/* enable timer tick */
 				if(ui.autoidle == 0){
 					ui.autoidle = 250;
 				} else {
@@ -529,6 +548,7 @@ uiexec(AIState *ai)
 				sendul(ui.tickcmd, ui.autoidle);
 				continue;
 			case 'D':
+				/* debugging */
 				km = (KeyMenu){"debug menu", dbgmenu};
 				i = menu(ui.kc, ui.mc, &km);
 				switch(i){
@@ -556,6 +576,64 @@ uiexec(AIState *ai)
 				}
 				redraw(&ui, 0, 0);
 				continue;	
+			case 'u':
+				/* use item */
+				km = (KeyMenu){"use what?", inventorymenu};
+				i = menu(ui.kc, ui.mc, &km);
+				if(i >= 0 && i <= player->inv.count){
+					item = ilnth(&player->inv, i);
+					switch(item->id->type){
+					case IWEAPON:
+						if(!mwield(player, i))
+							warn("can't equip that");
+						else {
+							item = player->weapon;
+							good("you are now wielding the %i!", item);
+						}
+						break;
+					case IARMOR:
+						if(!mwear(player, i))
+							warn("can't equip that");
+						else {
+							item = player->armor.head;
+							good("you are now wearing the %i!", item);
+						}
+						break;
+					default:
+						bad("you aren't sure what to do with the %i...", item);
+					}
+				}
+				redraw(&ui, 0, 0);
+				break;
+			case ',':
+				/* pickup item */
+				move = MPICKUP;
+				break;
+			case 'd':
+				/* drop item */
+				km = (KeyMenu){"drop what?", inventorymenu};
+				i = menu(ui.kc, ui.mc, &km);
+				if(i >= 0 && i <= player->inv.count){
+					item = iltakenth(&player->inv, i);
+					bad("you drop the %i.", item);
+					t = tileat(player->l, player->pt);
+					setflagat(player->l, player->pt, Fhasitem);
+					iladd(&t->items, item);
+				}
+				redraw(&ui, 0, 0);
+				break;
+			case 'W':
+				/* take off weapon */
+				if(player->weapon != nil){
+					bad("you stop wielding the %i.", player->weapon);
+					munwield(player);
+				}
+				break;
+			case 'A':
+				/* take off armor */
+				bad("you take off all your armor.");
+				mnaked(player);
+				break;
 			case 'h':
 			case Kleft:
 				move = MMOVE;
@@ -632,10 +710,10 @@ static int
 ch2ind(KeyMenu *km, Rune want)
 {
 	int i;
-	char *s;
+	char buf[64];
 	Rune c;
 
-	for(i = 0; (c=km->gen(i, &s)) != Runemax; i++){
+	for(i = 0; (c=km->gen(i, buf, 64)) != Runemax; i++){
 		if(c == want)
 			return i;
 	}
@@ -650,14 +728,14 @@ static int
 menu(Keyboardctl *kc, Mousectl *mc, KeyMenu *km)
 {
 	int i, nitem, maxwidth;
-	char *s, buf[256];
+	char menu[64], buf[256];
 	Rune ch, in;
 	Point p;
 	Rectangle r;
 
 	maxwidth = 0;
-	for(nitem = 0; (ch=km->gen(nitem, &s)) != Runemax; nitem++){
-		snprint(buf, sizeof(buf), "%C - %s", ch, s);
+	for(nitem = 0; (ch=km->gen(nitem, menu, 64)) != Runemax; nitem++){
+		snprint(buf, sizeof(buf), "%C - %s", ch, menu);
 		i = stringwidth(font, buf);
 		if(i > maxwidth)
 			maxwidth = i;
@@ -698,8 +776,8 @@ drawui:
 			string(screen, p, ui.cols[CGREY], ZP, font, km->label);
 			p.y += font->height;
 			for(i = 0; i < nitem; i++){
-				ch = km->gen(i, &s);
-				snprint(buf, sizeof(buf), "%C - %s", ch, s);
+				ch = km->gen(i, menu, 64);
+				snprint(buf, sizeof(buf), "%C - %s", ch, menu);
 				string(screen, p, display->white, ZP, font, buf);
 				p.y += font->height;
 			}

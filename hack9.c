@@ -136,8 +136,14 @@ threadmain(int argc, char *argv[])
 			sysfatal("monstdbopen: %r");
 	}
 
+	if(!itemdbopen("item.ndb")){
+		snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, "item.ndb");
+		if(!itemdbopen(buf))
+			sysfatal("itemdbopen: %r");
+	}
+
 	/* initial level */
-	if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE, nrand(3)+1)) == nil)
+	if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE, debug?0:nrand(3)+1)) == nil)
 		sysfatal("genlevel: %r");
 
 	/* the player */
@@ -150,9 +156,11 @@ threadmain(int argc, char *argv[])
 
 	player->l = level;
 	player->pt = level->up;
-	player->mvr = 16;
+
+	maddinv(player, ibyname("dagger"));
+
 	t = tileat(level, player->pt);
-	t->unit = TWIZARD;
+	t->unit = player->md->tile;
 	t->monst = player;
 	setflagat(level, player->pt, Fhasmonster);
 

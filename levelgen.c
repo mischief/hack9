@@ -189,6 +189,15 @@ mkmons(Level *l, Point p, char *type)
 	m->pt = p;
 	/* setup ai state */
 	idle(m);
+
+	/* items! */
+	if(nrand(5) == 0){
+		m->weapon = ibyname("dagger");
+	}
+	if(nrand(5) == 0){
+		maddinv(m, ibyname("shield"));
+		mwear(m, 0);
+	}
 	return m;
 }
 
@@ -332,10 +341,16 @@ err0:
 int
 mkldebug(Level *l)
 {
+	Tile *t;
+
 	drunken(l, TTREE, 3, 3, 3);
 	lclear(l, l->up, 1);
 	lclear(l, l->down, 1);
 	several(l, &l->down, 1, "lich", 1);
+
+	t = tileat(l, l->up);
+	setflagat(l, l->up, Fhasitem);
+	iladd(&t->items, ibyname("shield"));
 	return 0;
 }
 
@@ -378,6 +393,7 @@ mklforest(Level *l)
 	/* don't start empty */
 	genmonsters(l, "gnome lord", space/128);
 	genmonsters(l, "sergeant", space/128);
+
 	return 0;
 }
 
