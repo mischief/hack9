@@ -1,4 +1,4 @@
-# hack9 #
+# hack9	#
 
 ## running ##
 
@@ -17,7 +17,7 @@ mk
 
 ### unix ###
 * install [plan9port](https://github.com/9fans/plan9port).
-* make sure `$PLAN9` is set.
+* make sure `$PLAN9` is	set.
 * make sure `$PLAN9/bin` is in `$PATH`.
 * run:
 ```
@@ -27,6 +27,6 @@ cd
 hg clone https://bitbucket.org/mischief/hack9 hack9
 cd hack9
 mk -f mk.p9p
-o.hack9
+./o.hack9
 ```
 
