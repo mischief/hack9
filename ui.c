@@ -424,7 +424,7 @@ uiredraw(int justui)
 }
 
 static Rune
-dbgmenu(int idx, char *s, int /*sz*/)
+dbgmenu(int idx, char *s, int sz)
 {
 	switch(idx){
 	case 0:
@@ -487,7 +487,7 @@ equipmenu(int idx, char *s, int sz)
 }
 
 static Rune
-dirmenu(int idx, char *s, int /*sz*/)
+dirmenu(int idx, char *s, int sz)
 {
 	switch(idx){
 	case WEST:
