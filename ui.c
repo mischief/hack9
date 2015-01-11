@@ -740,7 +740,8 @@ csettings(Rune c)
 		}
 		break;
 	case 1:
-		snprint(buf, 64, "%d", ui.uisz);
+		/* ±2 for stats bar */
+		snprint(buf, 64, "%d", ui.uisz-2);
 		if(uienter("log lines:", buf, 64, ui.mc, ui.kc, nil) > 0){
 			uisz = atoi(buf);
 			if(uisz < 2 || uisz > 30){
@@ -799,11 +800,17 @@ helpmenu(int idx, char *s, int sz)
 static int
 chelp(Rune c)
 {
+	int i;
 	KeyMenu km;
 
 	USED(c);
 	km = (KeyMenu){"key commands", helpmenu};
-	menu(ui.kc, ui.mc, &km);
+	i = menu(ui.kc, ui.mc, &km);
+
+	if(i >= 0 && i < nelem(keycmds)-1){
+		/* could maybe print extended help instead */
+		return keycmds[i].cmd(keycmds[i].key);
+	}
 	return 0;
 }
 
