@@ -32,6 +32,7 @@ struct KeyMenu
 };
 
 static int menu(Keyboardctl *kc, Mousectl *mc, KeyMenu *km);
+static int uienter(char *ask, char *buf, int len, Mousectl *mc, Keyboardctl *kc, Screen *scr);
 
 typedef struct Msg Msg;
 struct Msg
@@ -428,14 +429,14 @@ dbgmenu(int idx, char *s, int sz)
 {
 	switch(idx){
 	case 0:
-		strcpy(s, "toggle debug flag");
+		snprint(s, sz, "toggle debug flag: %d", debug);
 		return 'd';
 	case 1:
-		strcpy(s, "revive and gain max hp");
-		return 'r';
-	case 2:
-		strcpy(s, "toggle far messages");
+		snprint(s, sz, "toggle far messages: %d", farmsg);
 		return 'f';
+	case 2:
+		snprint(s, sz, "revive and gain max hp");
+		return 'r';
 	}
 	return Runemax;
 }
@@ -731,7 +732,7 @@ csettings(Rune c)
 	switch(i){
 	case 0:
 		snprint(buf, 64, "%d", ui.autoidle);
-		if(enter("autoidle ms:", buf, 64, ui.mc, ui.kc, nil) > 0){
+		if(uienter("autoidle ms:", buf, 64, ui.mc, ui.kc, nil) > 0){
 			ui.autoidle = atoi(buf);
 			if(ui.autoidle < 0)
 				ui.autoidle = 0;
@@ -740,7 +741,7 @@ csettings(Rune c)
 		break;
 	case 1:
 		snprint(buf, 64, "%d", ui.uisz);
-		if(enter("log lines:", buf, 64, ui.mc, ui.kc, nil) > 0){
+		if(uienter("log lines:", buf, 64, ui.mc, ui.kc, nil) > 0){
 			uisz = atoi(buf);
 			if(uisz < 2 || uisz > 30){
 				bad("ui size must be between 2 and 30");
@@ -991,8 +992,8 @@ drawui:
 }
 
 /* my own copy of libdraw's, since plan9port doesn't have it. */
-int
-enter(char *ask, char *buf, int len, Mousectl *mc, Keyboardctl *kc, Screen *scr)
+static int
+uienter(char *ask, char *buf, int len, Mousectl *mc, Keyboardctl *kc, Screen *scr)
 {
 	int done, down, tick, n, h, w, l, i;
 	Image *b, *save;
@@ -1002,7 +1003,7 @@ enter(char *ask, char *buf, int len, Mousectl *mc, Keyboardctl *kc, Screen *scr)
 	Mouse m;
 	Rune k;
 
-	o = screen->r.min;
+	o = ZP;
 	sc = screen->clipr;
 	replclipr(screen, 0, screen->r);
 
@@ -1016,7 +1017,12 @@ enter(char *ask, char *buf, int len, Mousectl *mc, Keyboardctl *kc, Screen *scr)
 		n++;
 	}
 	if(mc){
+	/* ugly. */
+#ifndef PLAN9PORT
 		o = mc->xy;
+#else
+		o = mc->m.xy;
+#endif
 		a[n].op = CHANRCV;
 		a[n].c = mc->c;
 		a[n].v = &m;
@@ -1025,6 +1031,9 @@ enter(char *ask, char *buf, int len, Mousectl *mc, Keyboardctl *kc, Screen *scr)
 	a[n].op = CHANEND;
 	a[n].c = nil;
 	a[n].v = nil;
+
+	if(eqpt(o, ZP))
+		o = addpt(screen->r.min, Pt(Dx(screen->r)/3, Dy(screen->r)/3));
 
 	if(buf && len > 0)
 		n = strlen(buf);
@@ -1108,20 +1117,20 @@ nodraw:
 			n = -1;
 			break;
 		case 0:
-			if(buf == nil || k == Keof || k == '\n'){
+			if(buf == nil || k == 0x4 || k == '\n'){
 				done = 1;
 				break;
 			}
-			if(k == Knack || k == Kesc){
+			if(k == 0x15 || k == 0x1b){
 				done = !n;
 				buf[n = tick = 0] = 0;
 				break;
 			}
-			if(k == Ksoh || k == Khome){
+			if(k == 0x1 || k == Khome){
 				tick = 0;
 				continue;
 			}
-			if(k == Kenq || k == Kend){
+			if(k == 0x5 || k == Kend){
 				tick = n;
 				continue;
 			}
@@ -1140,7 +1149,7 @@ nodraw:
 				}
 				continue;
 			}
-			if(k == Ketb){
+			if(k == 0x17){
 				while(tick > 0){
 					tick--;
 					if(tick == 0 ||
@@ -1150,7 +1159,7 @@ nodraw:
 				buf[n = tick] = 0;
 				break;
 			}
-			if(k == Kbs){
+			if(k == 0x8){
 				if(tick <= 0)
 					continue;
 				for(i = 0; i < n; i += l){
@@ -1164,7 +1173,7 @@ nodraw:
 				}
 				break;
 			}
-			if(k < 0x20 || k == Kdel || (k & 0xFF00) == KF || (k & 0xFF00) == Spec)
+			if(k < 0x20 || k == 0x7f || (k & 0xFF00) == KF || (k & 0xFF00) == 0xF800)
 				continue;
 			if((len-n) <= (l = runelen(k)))
 				continue;
