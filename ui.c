@@ -682,6 +682,9 @@ cdebug(Rune c)
 		debug = !debug;
 		break;
 	case 1:
+		farmsg = !farmsg;
+		break;
+	case 2:
 		/* revive */
 		if(hasflagat(player->l, player->pt, Fhasmonster)){
 			warn("tile player occupied is blocked");
@@ -695,9 +698,6 @@ cdebug(Rune c)
 		tileat(player->l, player->pt)->monst = player;
 		tileat(player->l, player->pt)->unit = player->md->tile;
 		gameover = 0;
-		break;
-	case 2:
-		farmsg = !farmsg;
 		break;
 	}
 	return 0;
