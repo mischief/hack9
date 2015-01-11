@@ -489,6 +489,8 @@ equipmenu(int idx, char *s, int sz)
 static Rune
 dirmenu(int idx, char *s, int sz)
 {
+	USED(sz);
+
 	switch(idx){
 	case WEST:
 		strcpy(s, "west");
