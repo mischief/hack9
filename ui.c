@@ -506,15 +506,310 @@ dirmenu(int idx, char *s, int sz)
 	return Runemax;
 }
 
-void
-uiexec(AIState *ai)
+static int
+cmove(Rune c)
 {
-	int i, al, move, dir;
-	Rune c;
-	Msg *l, *lp;
+	int move, dir;
+
+	move = MNONE;
+	dir = NODIR;
+
+	switch(c){
+	case 'h':
+	case L'←':
+		move = MMOVE;
+		dir = WEST;
+		break;
+	case 'j':
+	case L'↓':
+		move = MMOVE;
+		dir = SOUTH;
+		break;
+	case 'k':
+	case L'↑':
+		move = MMOVE;
+		dir = NORTH;
+		break;
+	case 'l':
+	case L'→':
+		move = MMOVE;
+		dir = EAST;
+		break;
+	}
+
+	if((player->flags & Mdead) == 0 && move != MNONE){
+		if(maction(player, move, addpt(player->pt, cardinals[dir])) < 0){
+			msg("ouch!");
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+static int
+cport(Rune c)
+{
+	USED(c);
+
+	if((player->flags & Mdead) == 0){
+		if(maction(player, MUSE, addpt(player->pt, cardinals[NODIR])) < 0){
+			msg("there's no portal here.");
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+static int
+cpickup(Rune c)
+{
+	USED(c);
+
+	if((player->flags & Mdead) == 0){
+		if(maction(player, MPICKUP, addpt(player->pt, cardinals[NODIR])) < 0){
+			msg("there's nothing here.");
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+/* use item */
+static int
+cuse(Rune c)
+{
+	int i;
+	KeyMenu km;
+	Item *item;
+
+	USED(c);
+
+	km = (KeyMenu){"use what?", inventorymenu};
+	i = menu(ui.kc, ui.mc, &km);
+	if(i >= 0 && i <= player->inv.count){
+		item = ilnth(&player->inv, i);
+		switch(item->id->type){
+		case IWEAPON:
+		case IHELMET:
+		case ISHIELD:
+		case IARMOR:
+			if(!mwield(player, i)){
+				bad("can't equip that");
+				return 0;
+			} else
+				good("you are now %sing the %i!", item->id->type==IWEAPON?"wield":"wear", item);
+			break;
+		default:
+			warn("you aren't sure what to do with the %i...", item);
+			return 0;
+			break;
+		}
+	}
+	return 1;
+}
+
+static int
+cdrop(Rune c)
+{
+	int i;
 	KeyMenu km;
 	Item *item;
 	Tile *t;
+
+	USED(c);
+
+	/* drop item */
+	km = (KeyMenu){"drop what?", inventorymenu};
+	i = menu(ui.kc, ui.mc, &km);
+	if(i >= 0 && i <= player->inv.count){
+		item = iltakenth(&player->inv, i);
+		bad("you drop the %i.", item);
+		t = tileat(player->l, player->pt);
+		setflagat(player->l, player->pt, Fhasitem);
+		iladd(&t->items, item);
+		return 1;
+	}
+	return 0;
+}
+
+static int
+cstrip(Rune c)
+{
+	int i;
+	KeyMenu km;
+	Item *item;
+
+	USED(c);
+
+	/* take off armor */
+	km = (KeyMenu){"take off what?", equipmenu};
+	i = menu(ui.kc, ui.mc, &km);
+	if(i >= 0 && i <= 3){
+		munwield(player, i);
+		item = ilnth(&player->inv, 0);
+		warn("you take off the %i.", item);
+		return 1;
+	}
+	return 0;
+}
+
+static int
+cwait(Rune c)
+{
+	USED(c);
+	return 1;
+}
+
+static int
+cdebug(Rune c)
+{
+	int i;
+	KeyMenu km;
+
+	USED(c);
+
+	/* debugging */
+	km = (KeyMenu){"debug menu", dbgmenu};
+	i = menu(ui.kc, ui.mc, &km);
+	switch(i){
+	case 0:
+		debug = !debug;
+		break;
+	case 1:
+		/* revive */
+		if(hasflagat(player->l, player->pt, Fhasmonster)){
+			warn("tile player occupied is blocked");
+			break;
+		}
+
+		incref(&player->ref);
+		player->flags &= ~Mdead;
+		player->hp = player->maxhp;
+		setflagat(player->l, player->pt, Fhasmonster);
+		tileat(player->l, player->pt)->monst = player;
+		tileat(player->l, player->pt)->unit = player->md->tile;
+		gameover = 0;
+		break;
+	case 2:
+		farmsg = !farmsg;
+		break;
+	}
+	return 0;
+}
+
+static Rune
+settingmenu(int idx, char *s, int sz)
+{
+	switch(idx){
+	case 0:
+		snprint(s, sz, "set auto-move: %dms", ui.autoidle);
+		return 'A';
+	case 1:
+		snprint(s, sz, "log lines: %d", ui.uisz-2);
+		return 'L';
+	}
+	return Runemax;
+}
+
+static int
+csettings(Rune c)
+{
+	int i, uisz;
+	char buf[32];
+	KeyMenu km;
+
+	USED(c);
+
+	buf[0] = 0;
+	km = (KeyMenu){"settings", settingmenu};
+	i = menu(ui.kc, ui.mc, &km);
+	switch(i){
+	case 0:
+		snprint(buf, 64, "%d", ui.autoidle);
+		if(enter("autoidle ms", buf, 64, ui.mc, ui.kc, nil) > 0){
+			ui.autoidle = atoi(buf);
+			if(ui.autoidle < 0)
+				ui.autoidle = 0;
+			sendul(ui.tickcmd, ui.autoidle);
+		}
+		break;
+	case 1:
+		snprint(buf, 64, "%d", ui.uisz);
+		if(enter("log lines", buf, 64, ui.mc, ui.kc, nil) > 0){
+			uisz = atoi(buf);
+			if(uisz < 2 || uisz > 30){
+				bad("ui size must be between 2 and 30");
+				break;
+			}
+
+			ui.uisz = uisz+2;
+		}
+		break;
+	}
+	return 0;
+}
+
+typedef struct keycmd keycmd;
+struct keycmd {
+	Rune key;
+	int (*cmd)(Rune);
+	char *help;
+};
+
+static int chelp(Rune);
+
+static keycmd keycmds[] = {
+/* basic movement */
+{ 'h', cmove,		"move west" },
+{ 'j', cmove,		"move south", },
+{ 'k', cmove,		"move north", },
+{ 'l', cmove,		"move east" },
+{ L'←', cmove,		"move west" },
+{ L'↓', cmove,		"move south", },
+{ L'↑', cmove,		"move north", },
+{ L'→', cmove,		"move east" },
+
+{ '<', cport,		"use portal" },
+{ ',', cpickup,		"pickup item" },
+{ 'u', cuse,		"use inventory item" },
+{ 'd', cdrop,		"drop inventory item" },
+{ 'A', cstrip,		"take off weapon/armor" },
+{ '.', cwait,		"wait for a move" },
+{ 'S', csettings,	"game settings" },
+{ 'D', cdebug,		"debugging options" },
+{ '?', chelp,		"this help" },
+};
+
+static Rune
+helpmenu(int idx, char *s, int sz)
+{
+	if(idx > nelem(keycmds)-1)
+		return Runemax;
+
+	snprint(s, sz, "%s", keycmds[idx].help);
+	return keycmds[idx].key;
+}
+
+static int
+chelp(Rune c)
+{
+	KeyMenu km;
+
+	USED(c);
+	km = (KeyMenu){"key commands", helpmenu};
+	menu(ui.kc, ui.mc, &km);
+	return 0;
+}
+
+void
+uiexec(AIState *ai)
+{
+	int al;
+	Rune c;
+	Msg *l, *lp;
 
 	USED(ai);
 
@@ -566,157 +861,35 @@ uiexec(AIState *ai)
 				bad("you are dead. game over, man.");
 			}
 
-			move = MNONE;
-			dir = NODIR;
-
+			/* translation */
 			switch(c){
-			case 'T':
-				/* enable timer tick */
-				if(ui.autoidle == 0){
-					ui.autoidle = 250;
-				} else {
-					ui.autoidle = 0;
-				}
-				sendul(ui.tickcmd, ui.autoidle);
-				continue;
-			case 'D':
-				/* debugging */
-				km = (KeyMenu){"debug menu", dbgmenu};
-				i = menu(ui.kc, ui.mc, &km);
-				switch(i){
-				case 0:
-					debug = !debug;
-					break;
-				case 1:
-					/* revive */
-					if(hasflagat(player->l, player->pt, Fhasmonster)){
-						warn("tile player occupied is blocked");
-						break;
-					}
-
-					incref(&player->ref);
-					player->flags &= ~Mdead;
-					player->hp = player->maxhp;
-					setflagat(player->l, player->pt, Fhasmonster);
-					tileat(player->l, player->pt)->monst = player;
-					tileat(player->l, player->pt)->unit = player->md->tile;
-					gameover = 0;
-					break;
-				case 2:
-					farmsg = !farmsg;
-					break;
-				}
-				redraw(&ui, 0, 0);
-				continue;	
-			case 'u':
-				/* use item */
-				km = (KeyMenu){"use what?", inventorymenu};
-				i = menu(ui.kc, ui.mc, &km);
-				if(i >= 0 && i <= player->inv.count){
-					item = ilnth(&player->inv, i);
-					switch(item->id->type){
-					case IWEAPON:
-					case IHELMET:
-					case ISHIELD:
-					case IARMOR:
-						if(!mwield(player, i))
-							warn("can't equip that");
-						else
-							good("you are now %sing the %i!", item->id->type==IWEAPON?"wield":"wear", item);
-						break;
-					default:
-						bad("you aren't sure what to do with the %i...", item);
-						break;
-					}
-				}
-				redraw(&ui, 0, 0);
-				break;
-			case ',':
-				/* pickup item */
-				move = MPICKUP;
-				break;
-			case 'd':
-				/* drop item */
-				km = (KeyMenu){"drop what?", inventorymenu};
-				i = menu(ui.kc, ui.mc, &km);
-				if(i >= 0 && i <= player->inv.count){
-					item = iltakenth(&player->inv, i);
-					bad("you drop the %i.", item);
-					t = tileat(player->l, player->pt);
-					setflagat(player->l, player->pt, Fhasitem);
-					iladd(&t->items, item);
-				}
-				redraw(&ui, 0, 0);
-				break;
-			case 'A':
-				/* take off armor */
-				km = (KeyMenu){"take off what?", equipmenu};
-				i = menu(ui.kc, ui.mc, &km);
-				if(i >= 0 && i <= 3){
-					munwield(player, i);
-					item = ilnth(&player->inv, 0);
-					bad("you take off the %i.", item);
-				}
-				break;
-			case 'h':
 			case Kleft:
-				move = MMOVE;
-				dir = WEST;
+				c = L'←';
 				break;
-			case 'j':
-			case Kdown:
-				move = MMOVE;
-				dir = SOUTH;
-				break;
-			case 'k':
 			case Kup:
-				move = MMOVE;
-				dir = NORTH;
+				c = L'↑';
 				break;
-			case 'l':
+			case Kdown:
+				c = L'↓';
+				break;
 			case Kright:
-				move = MMOVE;
-				dir = EAST;
+				c = L'→';
 				break;
-			case '<':
-			case '>':
-				move = MUSE;
-				break;
-			case 's':
-				/* special */
-				move = MSPECIAL;
-				km = (KeyMenu){"in what direction?", dirmenu};
-				i = menu(ui.kc, ui.mc, &km);
-				if(i >= WEST && i < NCARDINAL)
-					dir = i;
-				if(dir == NODIR){
-					msg("bad direction for special");
-					continue;
-				}
-				break;
-			case '.':
-				/* do nothing */
-				break;
-			case '+':
-				ui.uisz+=2;
-				redraw(&ui, 0, 0);
-				continue;
-			case '-':
-				if(ui.uisz > 5)
-					ui.uisz-=2;
-				redraw(&ui, 0, 0);
-				continue;
-			case ' ':
-				msg("");
-			default:
-				/* don't waste a move */
-				redraw(&ui, 0, 0);
-				continue;
 			}
 
-			if((player->flags & Mdead) == 0 && move != MNONE){
-				if(maction(player, move, addpt(player->pt, cardinals[dir])) < 0)
-					msg("ouch!");
+			int h;
+			keycmd *cmd;
+			cmd = nil;
+			for(h = 0; h < nelem(keycmds); h++){
+				if(c == keycmds[h].key){
+					cmd = &keycmds[h];
+					break;
+				}
+			}
+
+			if(cmd == nil || (cmd != nil && !cmd->cmd(c))){
+				redraw(&ui, 0, 0);
+				continue;
 			}
 
 			if(gameover == 0 && player->flags & Mdead){
