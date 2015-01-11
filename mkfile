@@ -12,6 +12,10 @@ install:V:	$BIN/$TARG
 	cp monster.ndb $home/lib/hack9
 	cp item.ndb $home/lib/hack9
 
+uninstall:V:
+	rm -rf $BIN/$TARG
+	rm -rf $home/lib/hack9
+
 $O.alg:	algtest.$O alg.$O
 	$LD -o $target $prereq
 
