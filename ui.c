@@ -1050,6 +1050,7 @@ uienter(char *ask, char *buf, int len, Mousectl *mc, Keyboardctl *kc, Screen *sc
 	done = down = 0;
 
 	p = stringsize(font, " ");
+	t = ZP;
 	h = p.y;
 	w = p.x;
 
