@@ -86,7 +86,7 @@ struct ItemData
 
 enum
 {
-	IMAXAGE	= 250,
+	IMAXAGE	= 500,
 };
 
 struct Item
