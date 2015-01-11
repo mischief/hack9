@@ -32,6 +32,8 @@ static char *itemdbcmd[] = {
 
 static char *itemtype[] = {
 [IWEAPON]	"weapon",
+[IHELMET]	"helmet",
+[ISHIELD]	"shield",
 [IARMOR]	"armor",
 };
 
@@ -55,6 +57,8 @@ ifmt(Fmt *f)
 	case IWEAPON:
 		snprint(extra, sizeof(extra), " (%dd%d)", i->id->rolls, i->id->atk);
 		break;
+	case IHELMET:
+	case ISHIELD:
 	case IARMOR:
 		snprint(extra, sizeof(extra), " (ac %d)", i->id->ac);
 		break;
@@ -213,6 +217,9 @@ missing:
 void
 ifree(Item *i)
 {
+	if(i == nil)
+		return;
+
 	if(decref(&i->ref) != 0)
 		return;
 

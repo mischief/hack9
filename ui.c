@@ -455,6 +455,38 @@ inventorymenu(int idx, char *s, int sz)
 }
 
 static Rune
+equipmenu(int idx, char *s, int sz)
+{
+	switch(idx){
+	case 0:
+		if(player->weapon != nil){
+			snprint(s, sz, "weapon: %i", player->weapon);
+			return 'w';
+		}
+		return 0;
+	case 1:
+		if(player->helmet != nil){
+			snprint(s, sz, "helmet: %i", player->helmet);
+			return 'h';
+		}
+		return 0;
+	case 2:
+		if(player->shield != nil){
+			snprint(s, sz, "shield: %i", player->shield);
+			return 's';
+		}
+		return 0;
+	case 3:
+		if(player->armor!= nil){
+			snprint(s, sz, "armor: %i", player->armor);
+			return 'a';
+		}
+		return 0;
+	}
+	return Runemax;
+}
+
+static Rune
 dirmenu(int idx, char *s, int /*sz*/)
 {
 	switch(idx){
@@ -584,23 +616,17 @@ uiexec(AIState *ai)
 					item = ilnth(&player->inv, i);
 					switch(item->id->type){
 					case IWEAPON:
+					case IHELMET:
+					case ISHIELD:
+					case IARMOR:
 						if(!mwield(player, i))
 							warn("can't equip that");
-						else {
-							item = player->weapon;
-							good("you are now wielding the %i!", item);
-						}
-						break;
-					case IARMOR:
-						if(!mwear(player, i))
-							warn("can't equip that");
-						else {
-							item = player->armor.head;
-							good("you are now wearing the %i!", item);
-						}
+						else
+							good("you are now %sing the %i!", item->id->type==IWEAPON?"wield":"wear", item);
 						break;
 					default:
 						bad("you aren't sure what to do with the %i...", item);
+						break;
 					}
 				}
 				redraw(&ui, 0, 0);
@@ -622,17 +648,15 @@ uiexec(AIState *ai)
 				}
 				redraw(&ui, 0, 0);
 				break;
-			case 'W':
-				/* take off weapon */
-				if(player->weapon != nil){
-					bad("you stop wielding the %i.", player->weapon);
-					munwield(player);
-				}
-				break;
 			case 'A':
 				/* take off armor */
-				bad("you take off all your armor.");
-				mnaked(player);
+				km = (KeyMenu){"take off what?", equipmenu};
+				i = menu(ui.kc, ui.mc, &km);
+				if(i >= 0 && i <= 3){
+					munwield(player, i);
+					item = ilnth(&player->inv, 0);
+					bad("you take off the %i.", item);
+				}
 				break;
 			case 'h':
 			case Kleft:

@@ -4,8 +4,16 @@
 item="dagger"
 	tile=411 type=weapon cost=5 weight=5 atk=1d4
 	stacks
+item="longsword"
+	tile=431 type=weapon cost=10 weight=10 atk=1d8
+item="runesword"
+	tile=435 type=weapon cost=50 weight=10 atk=4d4
 
 # armor
+item="helmet"
+	tile=472 type=helmet cost=5 weight=2 ac=2
 item="shield"
-	tile=525 type=armor cost=5 weight=10 ac=2
+	tile=525 type=shield cost=5 weight=10 ac=2
+item="plate armor"
+	tile=496 type=armor cost=50 weight=15 ac=4
 

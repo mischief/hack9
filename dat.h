@@ -51,6 +51,8 @@ enum
 {
 	/* possible item types */
 	IWEAPON	= 0,
+	IHELMET,
+	ISHIELD,
 	IARMOR,
 
 	/* item flags */
@@ -82,9 +84,17 @@ struct ItemData
 	int flags;
 };
 
+enum
+{
+	IMAXAGE	= 250,
+};
+
 struct Item
 {
 	Ref ref;
+
+	/* age, for automatic deletion */
+	int age;
 
 	/* count of items in stack */
 	int count;
@@ -215,10 +225,11 @@ struct Monster
 	/* inventory */
 	ItemList inv;
 
-	/* equipped weapon */
+	/* equipped weapon & armor */
 	Item *weapon;
-	/* equipped armor */
-	ItemList armor;
+	Item *helmet;
+	Item *shield;
+	Item *armor;
 
 	/* no free */
 	MonsterData *md;
@@ -234,9 +245,7 @@ void mpushstate(Monster *m, AIState *a);
 AIState *mpopstate(Monster *m);
 int maction(Monster *m, int what, Point where);
 int mwield(Monster *m, int n);
-int munwield(Monster *m);
-int mwear(Monster *m, int n);
-void mnaked(Monster *m);
+int munwield(Monster *m, int type);
 void maddinv(Monster *m, Item *i);
 int xpcalc(int level);
 

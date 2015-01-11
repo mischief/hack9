@@ -195,7 +195,10 @@ mfree(Monster *m)
 	}
 
 	ilfree(&m->inv);
-	ilfree(&m->armor);
+	ifree(m->weapon);
+	ifree(m->helmet);
+	ifree(m->shield);
+	ifree(m->armor);
 
 	free(m);
 }
@@ -328,8 +331,10 @@ mattack(Monster *m, Monster *mt)
 		mt->flags = Mdead;
 
 		/* drop dead guy's stuff */
-		munwield(mt);
-		mnaked(mt);
+		munwield(mt, IWEAPON);
+		munwield(mt, IHELMET);
+		munwield(mt, ISHIELD);
+		munwield(mt, IARMOR);
 		while(mt->inv.count > 0){
 			i = iltakenth(&mt->inv, 0);
 			t = tileat(mt->l, mt->pt);
@@ -464,73 +469,88 @@ maction(Monster *m, int what, Point where)
 	return -1;
 }
 
-/* wield n'th item in inventory. */
+/* wield/wear n'th item in inventory. */
 int
 mwield(Monster *m, int n)
 {
-	Item *i;
+	Item **ptr, *old, *new;
 
-	i = nil;
+	old = nil;
+	new = iltakenth(&m->inv, n);
+	if(new == nil)
+		return 0;
 
-	if(m->weapon != nil)
-		i = m->weapon;
-
-	m->weapon = iltakenth(&m->inv, n);
-	if(m->weapon == nil){
-		m->weapon = i;
+	switch(new->id->type){
+	case IWEAPON:
+		ptr = &m->weapon;
+		break;
+	case IHELMET:
+		ptr = &m->helmet;
+		break;
+	case ISHIELD:
+		ptr = &m->shield;
+		break;
+	case IARMOR:
+		ptr = &m->armor;
+		break;
+	default:
+		iladd(&m->inv, new);
 		return 0;
 	}
 
-	if(i != nil)
-		iladd(&m->inv, i);
+	if(*ptr != nil)
+		old = *ptr;
+
+	*ptr = new;
+
+	if(old != nil){
+		m->ac += old->id->ac;
+		maddinv(m, old);
+	}
+
+	/* account for ac */
+	m->ac -= new->id->ac;
 
 	return 1;
 }
 
 int
-munwield(Monster *m)
+munwield(Monster *m, int type)
 {
-	if(m->weapon == nil)
-		return 0;
+	Item **ptr;
 
-	maddinv(m, m->weapon);
-	m->weapon = nil;
-	return 1;
-}
-
-/* put n'th inventory item on */
-int
-mwear(Monster *m, int n)
-{
-	Item *i;
-
-	i = iltakenth(&m->inv, n);
-	if(i == nil){
+	switch(type){
+	case IWEAPON:
+		ptr = &m->weapon;
+		break;
+	case IHELMET:
+		ptr = &m->helmet;
+		break;
+	case ISHIELD:
+		ptr = &m->shield;
+		break;
+	case IARMOR:
+		ptr = &m->armor;
+		break;
+	default:
 		return 0;
 	}
 
-	iladd(&m->armor, i);
+	if(*ptr == nil)
+		return 0;
 
-	m->ac -= i->id->ac;
+	m->ac += (*ptr)->id->ac;
+	maddinv(m, *ptr);
+	*ptr = nil;
 	return 1;
-}
-
-/* take off all armor */
-void
-mnaked(Monster *m)
-{
-	Item *i;
-
-	while((i = iltakenth(&m->armor, 0)) != nil){
-		m->ac += i->id->ac;
-		iladd(&m->inv, i);
-	}
 }
 
 void
 maddinv(Monster *m, Item *i)
 {
 	Item *it;
+
+	i->age = 0;
 
 	/* dedup item */
 	if(i->id->flags & IFSTACKS){

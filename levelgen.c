@@ -191,12 +191,27 @@ mkmons(Level *l, Point p, char *type)
 	idle(m);
 
 	/* items! */
-	if(nrand(5) == 0){
+	switch(nrand(100)){
+	case 0:
 		m->weapon = ibyname("dagger");
+		break;
+	case 1:
+		m->weapon = ibyname("longsword");
+	case 3:
+		m->weapon = ibyname("runesword");
+		break;
 	}
-	if(nrand(5) == 0){
+	if(nrand(50) == 0){
+		maddinv(m, ibyname("helmet"));
+		mwield(m, 0);
+	}
+	if(nrand(50) == 0){
 		maddinv(m, ibyname("shield"));
-		mwear(m, 0);
+		mwield(m, 0);
+	}
+	if(nrand(100) == 0){
+		maddinv(m, ibyname("plate armor"));
+		mwield(m, 0);
 	}
 	return m;
 }
@@ -261,6 +276,7 @@ levelexec(AIState *a)
 	Tile *t;
 	MonsterData *md;
 	Monster *m;
+	Item *it;
 
 	l = a->aux;
 
@@ -291,6 +307,22 @@ levelexec(AIState *a)
 				free(neigh);
 			}
 			several(l, &p, 1, sp->what, 0);
+		}
+	}
+
+	for(p.x = 0; p.x < l->width; p.x++){
+		for(p.y = 0; p.y < l->height; p.y++){
+			if(hasflagat(l, p, Fhasitem)){
+				t = tileat(l, p);
+				for(i = 0; i < t->items.count; i++){
+					it = ilnth(&t->items, i);
+					if(++it->age > IMAXAGE){
+						ifree(iltakenth(&t->items, i));
+						if(t->items.count == 0)
+							clrflagat(l, p, Fhasitem);
+					}
+				}
+			}
 		}
 	}
 }
