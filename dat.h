@@ -1,4 +1,5 @@
 typedef struct AIState AIState;
+typedef struct EquipData EquipData;
 typedef struct ItemData ItemData;
 typedef struct Item Item;
 typedef struct ItemList ItemList;
@@ -13,7 +14,8 @@ typedef struct Monster Monster;
 /* sizes */
 enum
 {
-	SZMONNAME = 32,
+	/* name of a monster, item, itemlist */
+	SZNAME = 64,
 };
 
 /* hack9.c */
@@ -62,7 +64,7 @@ enum
 struct ItemData
 {
 	/* item name */
-	char name[SZMONNAME];
+	char name[SZNAME];
 	/* type */
 	int type;
 	/* tile of this item */
@@ -147,9 +149,18 @@ void freetile(Tileset *t);
 /* draw i'th tile onto dst */
 void drawtile(Tileset *t, Image *dst, Point p, int i);
 
+/* describes what a monster can be equipped with. */
+struct EquipData
+{
+	/* of item/itemlist */
+	char name[SZNAME];
+	/* chance of being created */
+	double prob;
+};
+
 struct MonsterData
 {
-	char name[SZMONNAME];
+	char name[SZNAME];
 	/* offset into tileset */
 	int tile;
 
@@ -161,6 +172,9 @@ struct MonsterData
 	int def;
 	int rolls;
 	int atk;
+
+	EquipData equip[10];
+	int nequip;
 };
 
 /* possible moves */
@@ -247,6 +261,7 @@ int maction(Monster *m, int what, Point where);
 int mwield(Monster *m, int n);
 int munwield(Monster *m, int type);
 void maddinv(Monster *m, Item *i);
+void mgenequip(Monster *m);
 int xpcalc(int level);
 
 /* well known tiles, indexes into tileset */
@@ -280,7 +295,7 @@ struct Spawn
 	/* where spawn occurs */
 	Point pt;
 	/* what to spawn */
-	char what[SZMONNAME];
+	char what[SZNAME];
 	/* frequency of spawn, modulo turns */
 	int freq;
 	/* turn counter */

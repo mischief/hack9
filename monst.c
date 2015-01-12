@@ -17,6 +17,8 @@ enum
 	MONHP,
 	MONAC,
 	MONATK,
+	MONEQUIP,
+	MONEQPROB,
 };
 
 static char *monstdbcmd[] = {
@@ -28,6 +30,8 @@ static char *monstdbcmd[] = {
 [MONHP]		"hp",
 [MONAC]		"ac",
 [MONATK]	"atk",
+[MONEQUIP]	"equip",
+[MONEQPROB]	"eqprob",
 };
 
 static Ndb *monstdb;
@@ -52,35 +56,56 @@ static mdcache *monstcache = nil;
 
 /* TODO: sanity checks */
 static int
-mdaddattr(MonsterData *md, int type, char *attr)
+mdaddattr(MonsterData *md, int type, Ndbtuple *t)
 {
+	Ndbtuple *line;
+	EquipData *equip;
+
 	switch(type){
 	case MONNAME:
-		strncpy(md->name, attr, sizeof(md->name)-1);
+		strncpy(md->name, t->val, sizeof(md->name)-1);
 		md->name[sizeof(md->name)-1] = 0;
 		break;
 	case MONTILE:
-		md->tile = atol(attr);
+		md->tile = atol(t->val);
 	case MONXPL:
-		md->basexpl = atol(attr);
+		md->basexpl = atol(t->val);
 		break;
 	case MONALIGN:
-		md->align = (char)atol(attr);
+		md->align = (char)atol(t->val);
 		break;
 	case MONMVRATE:
-		md->mvr = atol(attr);
+		md->mvr = atol(t->val);
 		break;
 	case MONHP:
-		md->maxhp = atol(attr);
+		md->maxhp = atol(t->val);
 		break;
 	case MONAC:
-		md->def = atol(attr);
+		md->def = atol(t->val);
 		break;
 	case MONATK:
-		if(!parseroll(attr, &md->rolls, &md->atk)){
-			werrstr("bad roll '%s'", attr);
+		if(!parseroll(t->val, &md->rolls, &md->atk)){
+			werrstr("bad roll '%s'", t->val);
 			return 0;
 		}
+		break;
+	case MONEQUIP:
+		if(md->nequip > sizeof(md->equip)-1)
+			break;
+
+		equip = &md->equip[md->nequip++];
+		snprint(equip->name, SZNAME, "%s", t->val);
+		equip->prob = 1.0;
+
+		for(line = t->line; line != t; line = line->line){
+			if(strcmp(line->attr, monstdbcmd[MONEQPROB]) == 0){
+				equip->prob = atof(line->val);
+				break;
+			}
+		}
+		break;
+	case MONEQPROB:
+		/* handled by MONEQUIP */
 		break;
 	default:
 		return 0;
@@ -115,7 +140,7 @@ mdbyname(char *monster)
 	for(nt = t; nt != nil; nt = nt->entry){
 		for(i = 0; i < nelem(monstdbcmd); i++){
 			if(strcmp(nt->attr, monstdbcmd[i]) == 0){
-				if(!mdaddattr(md, i, nt->val))
+				if(!mdaddattr(md, i, nt))
 					sysfatal("bad monster value '%s=%s': %r", nt->attr, nt->val);
 				goto okattr;
 			}
@@ -564,6 +589,26 @@ maddinv(Monster *m, Item *i)
 	}
 
 	iladd(&m->inv, i);
+}
+
+/* generate equipment for monster based on equipment in db */
+void
+mgenequip(Monster *m)
+{
+	int i;
+	double prob;
+	EquipData *equip;
+	Item *it;
+
+	for(i = 0; i < m->md->nequip; i++){
+		equip = &m->md->equip[i];
+		prob = frand();
+		if(prob <= equip->prob){
+			it = ibyname(equip->name);
+			maddinv(m, it);
+			mwield(m, 0);
+		}
+	}
 }
 
 /* return the amount of xp required to gain a level */

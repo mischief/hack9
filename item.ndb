@@ -17,3 +17,14 @@ item="shield"
 item="plate armor"
 	tile=496 type=armor cost=50 weight=15 ac=4
 
+# item lists
+itemlist="common"
+	items="dagger"
+	items="helmet"
+itemlist="uncommon"
+	items="longsword"
+	items="shield"
+itemlist="rare"
+	items="plate armor"
+	items="runesword"
+

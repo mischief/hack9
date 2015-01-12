@@ -190,30 +190,9 @@ mkmons(Level *l, Point p, char *type)
 	/* setup ai state */
 	idle(m);
 
-	/* items! */
-	switch(nrand(100)){
-	case 0:
-		m->weapon = ibyname("dagger");
-		break;
-	case 1:
-		m->weapon = ibyname("longsword");
-		break;
-	case 3:
-		m->weapon = ibyname("runesword");
-		break;
-	}
-	if(nrand(50) == 0){
-		maddinv(m, ibyname("helmet"));
-		mwield(m, 0);
-	}
-	if(nrand(50) == 0){
-		maddinv(m, ibyname("shield"));
-		mwield(m, 0);
-	}
-	if(nrand(100) == 0){
-		maddinv(m, ibyname("plate armor"));
-		mwield(m, 0);
-	}
+	/* give the bad guy some items! */
+	mgenequip(m);
+
 	return m;
 }
 

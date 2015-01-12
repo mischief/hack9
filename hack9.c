@@ -130,16 +130,16 @@ threadmain(int argc, char *argv[])
 
 	uiinit(argv0);
 
-	if(!monstdbopen("monster.ndb")){
-		snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, "monster.ndb");
-		if(!monstdbopen(buf))
-			sysfatal("monstdbopen: %r");
-	}
-
 	if(!itemdbopen("item.ndb")){
 		snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, "item.ndb");
 		if(!itemdbopen(buf))
 			sysfatal("itemdbopen: %r");
+	}
+
+	if(!monstdbopen("monster.ndb")){
+		snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, "monster.ndb");
+		if(!monstdbopen(buf))
+			sysfatal("monstdbopen: %r");
 	}
 
 	/* initial level */

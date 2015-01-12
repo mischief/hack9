@@ -138,6 +138,43 @@ idaddattr(ItemData *id, int attr, char *val)
 	return 1;
 }
 
+/* resolve a list name into a random item on that list
+ * or inner list if recursive
+ */
+static ItemData*
+idbylistname(char *list)
+{
+	int i, cnt, pick;
+	Ndbtuple *t, *nt;
+	Ndbs search;
+
+	t = ndbsearch(itemdb, &search, "itemlist", list);
+	if(t == nil)
+		sysfatal("no such item list '%s'", list);
+
+	/* count items */
+	cnt = 0;
+	for(nt = t; nt != nil; nt = nt->entry){
+		if(strcmp(nt->attr, "items") == 0)
+			cnt++;
+	}
+
+	if(cnt == 0)
+		sysfatal("no items in list '%s'", list);
+
+	/* pick random item */
+	pick = nrand(cnt);
+
+	/* walk this many forward */
+	i = 0;
+	for(nt = t; nt != nil; nt = nt->entry){
+		if(i == pick)
+			return idbyname(nt->val);
+		i++;
+	}
+	return nil;
+}
+
 ItemData*
 idbyname(char *item)
 {
@@ -155,8 +192,15 @@ idbyname(char *item)
 	}
 
 	t = ndbsearch(itemdb, &search, "item", item);
-	if(t == nil)
-		return nil;
+
+	/*
+	 * if there is no item by this name, lookup an
+	 * item list by that name. if that exits, pick a
+	 * random item from the list.
+	 */
+	if(t == nil){
+		return idbylistname(item);
+	}
 
 	id = mallocz(sizeof(ItemData), 1);
 	assert(id != nil);
