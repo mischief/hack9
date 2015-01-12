@@ -197,6 +197,7 @@ mkmons(Level *l, Point p, char *type)
 		break;
 	case 1:
 		m->weapon = ibyname("longsword");
+		break;
 	case 3:
 		m->weapon = ibyname("runesword");
 		break;
