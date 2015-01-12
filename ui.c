@@ -273,7 +273,7 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 				if(t->monst != nil){
 					m = t->monst;
 					hp = m->hp, maxhp = m->maxhp;
-					snprint(buf, sizeof(buf), "%.0f/%.0f HP", hp, maxhp);
+					snprint(buf, sizeof(buf), "%d/%d HP", (int)hp, (int)maxhp);
 					if(hp > (maxhp/4)*3)
 						c = ui.cols[CGREEN];
 					else if(hp > maxhp/2)
@@ -352,7 +352,7 @@ drawui(Rectangle r)
 	p.x += sw;
 
 	hp = player->hp, maxhp = player->maxhp;
-	snprint(buf, sizeof(buf), "HP:%.0f/%.0f", hp, maxhp);
+	snprint(buf, sizeof(buf), "HP:%d/%d", (int)hp, (int)maxhp);
 	if(hp > (maxhp/4)*3)
 		c = ui.cols[CGREEN];
 	else if(hp > maxhp/2)
