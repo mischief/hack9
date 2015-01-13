@@ -54,8 +54,12 @@ enum
 	/* possible item types */
 	IWEAPON	= 0,
 	IHELMET,
+	ICLOAK,
 	ISHIELD,
 	IARMOR,
+	IGLOVES,
+	IBOOTS,
+	NEQUIP,
 
 	/* item flags */
 	IFSTACKS = 0x1,
@@ -119,6 +123,7 @@ struct ItemList
 
 /* item.c */
 #pragma varargck type "i" Item*
+char *itypetoname(int type);
 int itemdbopen(char *file);
 ItemData *idbyname(char *item);
 Item *ibyname(char *item);
@@ -240,10 +245,7 @@ struct Monster
 	ItemList inv;
 
 	/* equipped weapon & armor */
-	Item *weapon;
-	Item *helmet;
-	Item *shield;
-	Item *armor;
+	Item *armor[NEQUIP];
 
 	/* no free */
 	MonsterData *md;

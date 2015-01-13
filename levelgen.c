@@ -434,16 +434,16 @@ mklgraveyard(Level *l)
 
 	addspawn(l, p, "lich", 101, 1);
 	addspawn(l, p, "demilich", 157, 0);
-	addspawn(l, p, "ghost", 39, 2);
-	addspawn(l, p, "human zombie", 43, 2);
-	addspawn(l, p, "skeleton", 127, 1);
+	addspawn(l, p, "ghost", 15, 2);
+	addspawn(l, p, "human zombie", 27, 2);
+	addspawn(l, p, "skeleton", 71, 1);
 
 	several(l, &p2, 1, "gnome king", 0);
 	several(l, &p2, 1, "gnome wizard", 1);
-	addspawn(l, p2, "gnome", 23, 1);
-	addspawn(l, p2, "gnome lord", 25, 2);
-	addspawn(l, p2, "gnome wizard", 37, 2);
-	addspawn(l, p2, "gnome king", 53, 1);
+	addspawn(l, p2, "gnome", 29, 1);
+	addspawn(l, p2, "gnome lord", 45, 2);
+	addspawn(l, p2, "gnome wizard", 57, 2);
+	addspawn(l, p2, "gnome king", 71, 1);
 
 	genmonsters(l, "ghost", space/64);
 	genmonsters(l, "gnome", space/64);

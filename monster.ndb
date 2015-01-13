@@ -18,7 +18,7 @@ monster="gnome wizard"
 monster="gnome king"
 	tile=169 xpl=5 align=50 mvr=10 hp=48 ac=10 atk=2d6
 	equip="uncommon" eqprob=0.2
-	equip="rare" eqprob=0.5
+	equip="rare" eqprob=0.01
 
 # undead
 monster="lich"
@@ -34,8 +34,10 @@ monster="human zombie"
 monster="skeleton"
 	tile=250 xpl=12 align=-50 mvr=8 hp=48 ac=4 atk=2d6
 	equip="uncommon" eqprob=0.05
+	equip="rare" eqprob=0.01
 monster="ghost"
-	tile=290 xpl=1 align=-50 mvr=6 hp=16 ac=-5 atk=1d4
+	tile=290 xpl=10 align=-50 mvr=3 hp=16 ac=-5 atk=1d4
+	equip="tattered cape" eqprob=0.05
 
 # military
 monster="soldier"
@@ -51,11 +53,16 @@ monster="lieutenant"
 	equip="uncommon" eqprob=0.05
 monster="captain"
 	tile=283 xpl=12 align=-20 mvr=10 hp=48 ac=10 atk=4d4
-	equip="common" eqprob=0.1
-	equip="uncommon" eqprob=0.05
-	equip="rare" eqprob=0.01
+	equip="longsword"
+	equip="runesword" eqprob=0.1
+	equip="helmet"
+	equip="tattered cape"
+	equip="shield"
+	equip="plate armor"
+	equip="old gloves"
+	equip="walking shoes"
 
 # player
 monster="wizard"
-	tile=349 xpl=0 align=127 mvr=14 hp=64 ac=5 atk=2d3
+	tile=349 xpl=1 align=127 mvr=14 hp=64 ac=5 atk=2d3
 

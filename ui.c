@@ -458,33 +458,20 @@ inventorymenu(int idx, char *s, int sz)
 static Rune
 equipmenu(int idx, char *s, int sz)
 {
-	switch(idx){
-	case 0:
-		if(player->weapon != nil){
-			snprint(s, sz, "weapon: %i", player->weapon);
-			return 'w';
-		}
-		return 0;
-	case 1:
-		if(player->helmet != nil){
-			snprint(s, sz, "helmet: %i", player->helmet);
-			return 'h';
-		}
-		return 0;
-	case 2:
-		if(player->shield != nil){
-			snprint(s, sz, "shield: %i", player->shield);
-			return 's';
-		}
-		return 0;
-	case 3:
-		if(player->armor!= nil){
-			snprint(s, sz, "armor: %i", player->armor);
-			return 'a';
-		}
-		return 0;
+	Item *ptr;
+	Rune key[NEQUIP] = { 'w', 'c', 'h', 's', 'a', 'g', 'b' };
+
+	if(idx >= NEQUIP)
+		return Runemax;
+
+	ptr = player->armor[idx];
+
+	if(ptr != nil){
+		snprint(s, sz, "%s: %i", itypetoname(ptr->id->type), ptr);
+		return key[idx];
 	}
-	return Runemax;
+
+	return 0;
 }
 
 static Rune
@@ -597,8 +584,11 @@ cuse(Rune c)
 		switch(item->id->type){
 		case IWEAPON:
 		case IHELMET:
+		case ICLOAK:
 		case ISHIELD:
 		case IARMOR:
+		case IGLOVES:
+		case IBOOTS:
 			if(!mwield(player, i)){
 				bad("can't equip that");
 				return 0;
@@ -650,7 +640,7 @@ cstrip(Rune c)
 	/* take off armor */
 	km = (KeyMenu){"take off what?", equipmenu};
 	i = menu(ui.kc, ui.mc, &km);
-	if(i >= 0 && i <= 3){
+	if(i >= 0 && i < NEQUIP){
 		munwield(player, i);
 		item = ilnth(&player->inv, 0);
 		warn("you take off the %i.", item);

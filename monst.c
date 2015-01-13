@@ -204,6 +204,7 @@ missing:
 void
 mfree(Monster *m)
 {
+	int n;
 	AIState *a;
 
 	if(decref(&m->ref) != 0)
@@ -219,11 +220,13 @@ mfree(Monster *m)
 			freestate(a);
 	}
 
+	for(n = 0; n < NEQUIP; n++){
+		if(m->armor[n] != nil){
+			munwield(m, n);
+		}
+	}
+
 	ilfree(&m->inv);
-	ifree(m->weapon);
-	ifree(m->helmet);
-	ifree(m->shield);
-	ifree(m->armor);
 
 	free(m);
 }
@@ -249,12 +252,8 @@ mupdate(Monster *m)
 
 		/* gain some hp if you aren't dead. */
 		if((m->flags & Mdead) == 0)
-		if(m->hp < m->maxhp){
-			/* below half, 2%. above, 0.5%. */
-			if(m->hp < m->maxhp/2)
-				m->hp += 1.0 + (double)m->maxhp/50.0;
-			else
-				m->hp += (double)m->maxhp/200.0;
+		if(m->hp < m->maxhp && m->turns % (42+(m->xpl+2)+1) == 0){
+			m->hp+=1.0;
 			if(m->hp > m->maxhp)
 				m->hp = m->maxhp;
 		}
@@ -314,12 +313,14 @@ maddxp(Monster *m, int xp)
 static int
 mattack(Monster *m, Monster *mt)
 {
-	int hit, crit, dmg, xp;
+	int n, hit, ac, crit, dmg, xp;
 	Item *i, *weap;
 	Tile *t;
 
-	hit = roll(1, 100);
-	if(hit < 10+abs(mt->ac-10)*2){
+	hit = roll(1, 20);
+	ac = mt->ac >= 0 ? mt->ac : -(1+nrand(mt->ac));
+
+	if(hit > 10 + ac + m->xpl){
 		if(nearyou(m->pt))
 			warn("the %s misses the %s!", m->md->name, mt->md->name);
 		return 0;
@@ -328,7 +329,7 @@ mattack(Monster *m, Monster *mt)
 	dmg = roll(m->md->rolls, m->md->atk);
 
 	/* factor in weapon damage */
-	weap = m->weapon;
+	weap = m->armor[IWEAPON];
 	if(weap != nil)
 		dmg += roll(weap->id->rolls, weap->id->atk);
 
@@ -355,11 +356,14 @@ mattack(Monster *m, Monster *mt)
 		mt->hp = 0;
 		mt->flags = Mdead;
 
+		/* take off all armor */
+		for(n = 0; n < NEQUIP; n++){
+			if(mt->armor[n] != nil){
+				munwield(mt, n);
+			}
+		}
+
 		/* drop dead guy's stuff */
-		munwield(mt, IWEAPON);
-		munwield(mt, IHELMET);
-		munwield(mt, ISHIELD);
-		munwield(mt, IARMOR);
 		while(mt->inv.count > 0){
 			i = iltakenth(&mt->inv, 0);
 			t = tileat(mt->l, mt->pt);
@@ -367,7 +371,7 @@ mattack(Monster *m, Monster *mt)
 			iladd(&t->items, i);
 		}
 
-		xp = 10+10*pow(mt->xpl, 1.75);
+		xp = 10 + pow(mt->xpl, 2.0);
 		if(nearyou(m->pt))
 			bad("the %s kills the %s, and gains %ld xp.", m->md->name, mt->md->name, xp);
 
@@ -393,6 +397,7 @@ mattack(Monster *m, Monster *mt)
 int
 maction(Monster *m, int what, Point where)
 {
+	int n;
 	Tile *cur, *targ;
 	Item *i;
 
@@ -431,8 +436,9 @@ maction(Monster *m, int what, Point where)
 			m->pt = where;
 
 			if(isyou(m) && hasflagat(m->l, where, Fhasitem)){
-				i = ilnth(&targ->items, 0);
-				warn("you see %i here.", i);
+				n = 0;
+				while((i = ilnth(&targ->items, n++)) != nil)
+					warn("you see %i here.", i);
 			}
 
 			if(isyou(m) && hasflagat(m->l, where, Fportal)){
@@ -498,30 +504,21 @@ maction(Monster *m, int what, Point where)
 int
 mwield(Monster *m, int n)
 {
+	int type;
 	Item **ptr, *old, *new;
 
 	old = nil;
-	new = iltakenth(&m->inv, n);
+	new = ilnth(&m->inv, n);
 	if(new == nil)
 		return 0;
 
-	switch(new->id->type){
-	case IWEAPON:
-		ptr = &m->weapon;
-		break;
-	case IHELMET:
-		ptr = &m->helmet;
-		break;
-	case ISHIELD:
-		ptr = &m->shield;
-		break;
-	case IARMOR:
-		ptr = &m->armor;
-		break;
-	default:
-		iladd(&m->inv, new);
+	type = new->id->type;
+	if(type < IWEAPON || type >= NEQUIP)
 		return 0;
-	}
+
+	new = iltakenth(&m->inv, n);
+	type = new->id->type;
+	ptr = &m->armor[type];
 
 	if(*ptr != nil)
 		old = *ptr;
@@ -544,22 +541,9 @@ munwield(Monster *m, int type)
 {
 	Item **ptr;
 
-	switch(type){
-	case IWEAPON:
-		ptr = &m->weapon;
-		break;
-	case IHELMET:
-		ptr = &m->helmet;
-		break;
-	case ISHIELD:
-		ptr = &m->shield;
-		break;
-	case IARMOR:
-		ptr = &m->armor;
-		break;
-	default:
-		return 0;
-	}
+	assert(type >= IWEAPON && type < NEQUIP);
+
+	ptr = &m->armor[type];
 
 	if(*ptr == nil)
 		return 0;

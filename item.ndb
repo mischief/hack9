@@ -11,16 +11,25 @@ item="runesword"
 
 # armor
 item="helmet"
-	tile=472 type=helmet cost=5 weight=2 ac=2
+	tile=472 type=helmet cost=5 weight=2 ac=1
+item="tattered cape"
+	tile=521 type=cloak cost=5 weight=2 ac=1
 item="shield"
-	tile=525 type=shield cost=5 weight=10 ac=2
+	tile=525 type=shield cost=5 weight=10 ac=1
 item="plate armor"
 	tile=496 type=armor cost=50 weight=15 ac=4
+item="old gloves"
+	tile=532 type=gloves cost=5 weight=1 ac=1
+item="walking shoes"
+	tile=536 type=boots cost=5 weight=1 ac=1
 
 # item lists
 itemlist="common"
 	items="dagger"
 	items="helmet"
+	items="tattered cape"
+	items="old gloves"
+	items="walking shoes"
 itemlist="uncommon"
 	items="longsword"
 	items="shield"

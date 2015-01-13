@@ -33,9 +33,20 @@ static char *itemdbcmd[] = {
 static char *itemtype[] = {
 [IWEAPON]	"weapon",
 [IHELMET]	"helmet",
+[ICLOAK]	"cloak",
 [ISHIELD]	"shield",
 [IARMOR]	"armor",
+[IGLOVES]	"gloves",
+[IBOOTS]	"boots",
 };
+
+char*
+itypetoname(int type)
+{
+	if(type < 0 || type > nelem(itemtype)-1)
+		return nil;
+	return itemtype[type];
+}
 
 static Ndb *itemdb;
 
@@ -58,8 +69,11 @@ ifmt(Fmt *f)
 		snprint(extra, sizeof(extra), " (%dd%d)", i->id->rolls, i->id->atk);
 		break;
 	case IHELMET:
+	case ICLOAK:
 	case ISHIELD:
 	case IARMOR:
+	case IGLOVES:
+	case IBOOTS:
 		snprint(extra, sizeof(extra), " (ac %d)", i->id->ac);
 		break;
 	}
@@ -150,7 +164,7 @@ idbylistname(char *list)
 
 	t = ndbsearch(itemdb, &search, "itemlist", list);
 	if(t == nil)
-		sysfatal("no such item list '%s'", list);
+		sysfatal("no such itemlist '%s'", list);
 
 	/* count items */
 	cnt = 0;
@@ -160,7 +174,7 @@ idbylistname(char *list)
 	}
 
 	if(cnt == 0)
-		sysfatal("no items in list '%s'", list);
+		sysfatal("no items in itemlist '%s'", list);
 
 	/* pick random item */
 	pick = nrand(cnt);
@@ -168,9 +182,8 @@ idbylistname(char *list)
 	/* walk this many forward */
 	i = 0;
 	for(nt = t; nt != nil; nt = nt->entry){
-		if(i == pick)
+		if(strcmp(nt->attr, "items") == 0 && i++ == pick)
 			return idbyname(nt->val);
-		i++;
 	}
 	return nil;
 }
