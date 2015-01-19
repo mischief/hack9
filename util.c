@@ -57,3 +57,19 @@ max(int a, int b)
 	return b;
 }
 
+/* needed because p9p doesn't have frand for some reason. */
+#define	MASK	0x7fffffffL
+#define	NORM	(1.0/(1.0+MASK))
+
+double
+frand(void)
+{
+	double x;
+
+	do {
+		x = lrand() * NORM;
+		x = (x + lrand()) * NORM;
+	} while(x >= 1);
+	return x;
+}
+
