@@ -252,7 +252,7 @@ mupdate(Monster *m)
 
 		/* gain some hp if you aren't dead. */
 		if((m->flags & Mdead) == 0)
-		if(m->hp < m->maxhp && m->turns % (42+(m->xpl+2)+1) == 0){
+		if(m->hp < m->maxhp && m->turns % (42/(m->xpl+2))+1 == 0){
 			m->hp+=1.0;
 			if(m->hp > m->maxhp)
 				m->hp = m->maxhp;
@@ -457,7 +457,7 @@ maction(Monster *m, int what, Point where)
 			m = cur->monst;
 			cur->monst = nil;
 			if(cur->portal->to == nil){
-				if((cur->portal->to = genlevel(nrand(20)+50, nrand(20)+10, nrand(3)+1)) == nil)
+				if((cur->portal->to = genlevel(nrand(20)+50, nrand(20)+20, nrand(3)+1)) == nil)
 					sysfatal("genlevel: %r");
 
 				cur->portal->pt = cur->portal->to->up;
