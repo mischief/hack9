@@ -251,8 +251,7 @@ mupdate(Monster *m)
 		m->turns++;
 
 		/* gain some hp if you aren't dead. */
-		if((m->flags & Mdead) == 0)
-		if(m->hp < m->maxhp && m->turns % (42/(m->xpl+2))+1 == 0){
+		if((m->flags & Mdead) == 0 && m->hp < m->maxhp && m->turns % ((42/(m->xpl+2))+1) == 0){
 			m->hp+=1.0;
 			if(m->hp > m->maxhp)
 				m->hp = m->maxhp;
