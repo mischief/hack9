@@ -1,21 +1,20 @@
 </$objtype/mkfile
 
-BIN=$home/bin/$objtype
+BIN=/$objtype/bin/games
 
 <mk.common
 
 </sys/src/cmd/mkone
 
 install:V:	$BIN/$TARG
-	mkdir -p $home/lib/hack9
-	cp nethack.32x32 $home/lib/hack9
-	cp monster.ndb $home/lib/hack9
-	cp item.ndb $home/lib/hack9
+	mkdir -p /lib/hack9
+	cp nethack.32x32 /lib/hack9
+	cp monster.ndb /lib/hack9
+	cp item.ndb /lib/hack9
 
 uninstall:V:
-	rm -rf $BIN/$TARG
-	rm -rf $home/lib/hack9
+	rm -r $BIN/$TARG
+	rm -r /lib/hack9
 
 $O.alg:	algtest.$O alg.$O
 	$LD -o $target $prereq
-

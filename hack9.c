@@ -107,8 +107,6 @@ usage(void)
 void
 threadmain(int argc, char *argv[])
 {
-	char buf[256];
-	/* of viewport, in size of tiles */
 	Tile *t;
 	Level *level;
 
@@ -130,17 +128,13 @@ threadmain(int argc, char *argv[])
 
 	uiinit(argv0);
 
-	if(!itemdbopen("item.ndb")){
-		snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, "item.ndb");
-		if(!itemdbopen(buf))
+	if(!itemdbopen("/lib/hack9/item.ndb"))
+		if(!itemdbopen("item.ndb"))
 			sysfatal("itemdbopen: %r");
-	}
 
-	if(!monstdbopen("monster.ndb")){
-		snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, "monster.ndb");
-		if(!monstdbopen(buf))
+	if(!monstdbopen("/lib/hack9/monster.ndb"))
+		if(!monstdbopen("monster.ndb"))
 			sysfatal("monstdbopen: %r");
-	}
 
 	/* initial level */
 	if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE, debug?0:nrand(3)+1)) == nil)

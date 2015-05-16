@@ -113,7 +113,6 @@ tickproc(void *v)
 void
 uiinit(char *name)
 {
-	char buf[1024];
 	char *tileset;
 
 	if(initdraw(nil, nil, name) < 0)
@@ -141,13 +140,12 @@ uiinit(char *name)
 
 	tileset = getenv("tileset");
 	if(tileset == nil)
-		tileset = strdup("nethack.32x32");
+		tileset = strdup("/lib/hack9/nethack.32x32");
 
-	if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil){
-		snprint(buf, sizeof(buf), "%s/lib/hack9/%s", home, tileset);
-		if((ui.tiles = opentile(buf, 32, 32)) == nil)
+	if((ui.tiles = opentile(tileset, 32, 32)) == nil)
+		if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil)
 			sysfatal("opentile: %r");
-	}
+
 	free(tileset);
 
 	if((ui.cols = mallocz(CEND * sizeof(Image*), 1)) == nil)
