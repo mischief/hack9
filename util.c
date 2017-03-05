@@ -73,3 +73,14 @@ frand(void)
 	return x;
 }
 
+void*
+emalloc(ulong size)
+{
+	void *p;
+
+	p = mallocz(size, 1);
+	if(p == nil)
+		sysfatal("out of memory allocating %lud bytes", size);
+	setmalloctag(p, getcallerpc(&size));
+	return p;
+}

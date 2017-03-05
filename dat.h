@@ -416,4 +416,4 @@ int roll(int count, int sides);
 int parseroll(char *str, int *count, int *sides);
 int min(int a, int b);
 int max(int a, int b);
-
+void *emalloc(ulong);
