@@ -234,6 +234,22 @@ dbg(char *fmt, ...)
 	va_end(arg);
 }
 
+static Image*
+hpcolor(int hp, int maxhp)
+{
+	Image *c;
+
+	if(hp > (maxhp/4)*3)
+		c = ui.cols[CGREEN];
+	else if(hp > maxhp/2)
+		c = ui.cols[CYELLOW];
+	else if(hp > maxhp/4)
+		c = ui.cols[CORANGE];
+	else
+		c = ui.cols[CRED];
+
+	return c;
+}
 
 /* draw the whole level on the screen using tileset ts.
  * r.min is the upper left visible tile, and r.max is
@@ -272,14 +288,7 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 					m = t->monst;
 					hp = m->hp, maxhp = m->maxhp;
 					snprint(buf, sizeof(buf), "%d/%d HP", (int)hp, (int)maxhp);
-					if(hp > (maxhp/4)*3)
-						c = ui.cols[CGREEN];
-					else if(hp > maxhp/2)
-						c = ui.cols[CYELLOW];
-					else if(hp > maxhp/4)
-						c = ui.cols[CORANGE];
-					else
-						c = ui.cols[CRED];
+					c = hpcolor(hp, maxhp);
 					p2 = addpt(sp, bot);
 					string(screen, p2, c, ZP, smallfont, buf);
 					p2.y -= smallfont->height;
