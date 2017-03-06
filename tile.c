@@ -66,11 +66,10 @@ drawtile(Tileset *t, Image *dst, Point p, int i)
 	wid = Dx(t->image->r) / t->width;
 
 	dstr.min = p;
-	dstr.max = addpt(p, Pt(t->width, t->height));
+	dstr.max = addpt(p, t->sz);
 
-	spt.y = (i / wid) * t->width;
-	spt.x = (i % wid) * t->height;
+	spt.x = (i % wid) * t->width;
+	spt.y = (i / wid) * t->height;
 
 	draw(dst, dstr, t->image, nil, spt);
 }
-
