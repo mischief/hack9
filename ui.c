@@ -113,7 +113,10 @@ tickproc(void *v)
 void
 uiinit(char *name)
 {
-	char *tileset;
+	int tx, ty;
+	char *tileset, *tmp;
+
+	tx = ty = 0;
 
 	if(initdraw(nil, nil, name) < 0)
 		sysfatal("initdraw: %r");
@@ -139,13 +142,25 @@ uiinit(char *name)
 		sysfatal("chancreate: %r");
 
 	tileset = getenv("tileset");
-	if(tileset == nil)
-		tileset = strdup("/lib/hack9/nethack.32x32");
+	if(tileset != nil){
+		if((tmp = getenv("tilesetx")) == nil || (tx = atoi(tmp)) == 0)
+			sysfatal("zero tilesetx");
+		free(tmp);
 
-	if((ui.tiles = opentile(tileset, 32, 32)) == nil)
-		if((ui.tiles = opentile("nethack.32x32", 32, 32)) == nil)
-			sysfatal("opentile: %r");
+		if((tmp = getenv("tilesety")) == nil || (ty = atoi(tmp)) == 0)
+			sysfatal("zero tilesety");
+		free(tmp);
+	} else {
+		if(access("nethack.32x32", AREAD) == 0)
+			tileset = strdup("nethack.32x32");
+		else
+			tileset = strdup("/lib/hack9/nethack.32x32");
+		tx = 32;
+		ty = 32;
+	}
 
+	if((ui.tiles = opentile(tileset, tx, ty)) == nil)
+		sysfatal("opentile %s @ %dx%d: %r", tileset, tx, ty);
 	free(tileset);
 
 	if((ui.cols = mallocz(CEND * sizeof(Image*), 1)) == nil)
