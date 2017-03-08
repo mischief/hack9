@@ -616,14 +616,14 @@ cuse(Rune c)
 				return 0;
 			} else
 				good("you are now %sing the %i!", item->id->type==IWEAPON?"wield":"wear", item);
-			break;
+			return 1;
 		default:
 			warn("you aren't sure what to do with the %i...", item);
 			return 0;
 			break;
 		}
 	}
-	return 1;
+	return 0;
 }
 
 static int
