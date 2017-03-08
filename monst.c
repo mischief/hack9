@@ -150,6 +150,8 @@ okattr:
 		continue;
 	}
 
+	ndbfree(t);
+
 	mdc = mallocz(sizeof(mdcache), 1);
 	assert(mdc != nil);
 

@@ -161,6 +161,7 @@ idbylistname(char *list)
 	int i, cnt, pick;
 	Ndbtuple *t, *nt;
 	Ndbs search;
+	ItemData *id;
 
 	t = ndbsearch(itemdb, &search, "itemlist", list);
 	if(t == nil)
@@ -181,11 +182,17 @@ idbylistname(char *list)
 
 	/* walk this many forward */
 	i = 0;
+	id = nil;
 	for(nt = t; nt != nil; nt = nt->entry){
-		if(strcmp(nt->attr, "items") == 0 && i++ == pick)
-			return idbyname(nt->val);
+		if(strcmp(nt->attr, "items") == 0 && i++ == pick){
+			id = idbyname(nt->val);
+			break;
+		}
 	}
-	return nil;
+
+	ndbfree(t);
+
+	return id;
 }
 
 ItemData*
@@ -230,6 +237,8 @@ idbyname(char *item)
 okattr:
 		continue;
 	}
+
+	ndbfree(t);
 
 	idc = mallocz(sizeof(idcache), 1);
 	assert(idc != nil);
