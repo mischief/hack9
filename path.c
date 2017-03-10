@@ -54,7 +54,7 @@ pathfind(Level *l, Point start, Point end, Point **path, int not)
 	if(eqpt(start, end))
 		return npath;
 
-	nodes = mallocz(sizeof(PNode) * l->width * l->height, 1);
+	nodes = emalloc(sizeof(PNode) * l->width * l->height);
 	if(nodes == nil)
 		return npath;
 
@@ -114,7 +114,7 @@ pathfind(Level *l, Point start, Point end, Point **path, int not)
 
 	npath = i;
 
-	*path = mallocz(sizeof(Point) * i + 2, 1);
+	*path = emalloc(sizeof(Point) * i + 2);
 	for(i = 0; i < npath; i++){
 		(*path)[i] = rev->pt;
 		rev = rev->parent;
