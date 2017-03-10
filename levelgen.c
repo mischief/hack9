@@ -498,7 +498,7 @@ mklcastle(Level *l)
 	mid.min.y += n;
 	mid.max.y -= n;
 
-	lborder(l, mid, 1, TWALL);
+	lborder(l, mid, 1, TTLCORNER);
 	lborder(l, mid, -1, TWATER);
 
 	/* create path in */

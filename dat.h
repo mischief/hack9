@@ -281,12 +281,19 @@ int xpcalc(int level);
 enum
 {
 	/* features */
-	TWALL		= 840,
+	TVWALL		= 830,
+	THWALL		= 831,
+	TTLCORNER	= 832,
+	TTRCORNER	= 833,
+	TBLCORNER	= 834,
+	TBRCORNER	= 835,
+	TSQUARE		= 841,
 	TTREE		= 847,
 	TFLOOR		= 848,
 	TUPSTAIR	= 851,
 	TDOWNSTAIR	= 852,
 	TGRAVE		= 856,
+	TFOUNTAIN	= 859,
 	TWATER		= 860,
 	TICE		= 861,
 	TLAVA		= 862,
