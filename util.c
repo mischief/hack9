@@ -13,13 +13,45 @@ Point cardinals[] = {
 [NODIR]	{  0,  0 },
 };
 
+/* pick a random point along some side of the rect, no corners */
+Point
+pickpoint(Rectangle r, int dir, int inset)
+{
+	Point p;
+
+	assert(inset >= 0);
+
+	switch(dir){
+	case WEST:
+		p = Pt(r.min.x, r.min.y + nrand(Dy(r)-inset) + inset);
+		break;
+	case SOUTH:
+		p = Pt(r.min.x + nrand(Dx(r)-inset) + inset, r.max.y);
+		break;
+	case NORTH:
+		p = Pt(r.min.x + nrand(Dx(r)-inset) + inset, r.min.y);
+		break;
+	case EAST:
+		p = Pt(r.max.x, r.min.y + nrand(Dy(r)-inset) + inset);
+		break;
+	default:
+		abort();
+	}
+
+	r.max.x++;
+	r.max.y++;
+	assert(ptinrect(p, r));
+
+	return p;
+}
+
 int
 roll(int count, int sides)
 {
 	int d;
 	d = 0;
 	while(count--> 0)
-		d += 1+lnrand(sides);
+		d += 1+nrand(sides);
 	return d;
 }
 

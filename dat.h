@@ -18,6 +18,17 @@ enum
 	SZNAME = 64,
 };
 
+/* directions. ordering matters to drunk1() */
+enum
+{
+	WEST	= 0,
+	SOUTH,
+	EAST,
+	NORTH,
+	NCARDINAL,
+	NODIR,
+};
+
 /* hack9.c */
 extern int debug;
 extern int farmsg;
@@ -401,17 +412,8 @@ void uiexec(AIState *ai);
 void uiredraw(int justui);
 
 /* util.c */
-enum
-{
-	WEST,
-	SOUTH,
-	NORTH,
-	EAST,
-	NCARDINAL,
-	NODIR,
-};
-
 extern Point cardinals[];
+Point pickpoint(Rectangle r, int dir, int inset);
 int roll(int count, int sides);
 int parseroll(char *str, int *count, int *sides);
 int min(int a, int b);
