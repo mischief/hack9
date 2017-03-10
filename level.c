@@ -24,15 +24,16 @@ addspawn(Level *l, Point p, char *what, int freq, int istrap)
 }
 
 static void
-mkportal(Level *l, Point p, int feat, char *name)
+mkportal(Level *l, Point p, int feat, Level *to, Point tp)
 {
 	Tile *t;
 
-	setflagat(l, p, Fhasfeature|Fportal);
+	flagat(l, p) = (Fhasfeature|Fportal);
 	t = tileat(l, p);
 	t->feat = feat;
 	t->portal = emalloc(sizeof(Portal));
-	snprint(t->portal->name, sizeof(t->portal->name), "%s", name);
+	t->portal->to = to;
+	t->portal->pt = tp;
 }
 
 static void
@@ -51,8 +52,8 @@ lrandstairs(Level *l)
 	l->up = pup;
 	l->down = pdown;
 
-	mkportal(l, pup, TUPSTAIR, "starcase upstairs");
-	mkportal(l, pdown, TDOWNSTAIR, "staircase downstairs");
+	mkportal(l, pup, TUPSTAIR, nil, ZP);
+	mkportal(l, pdown, TDOWNSTAIR, nil, ZP);
 }
 
 static int

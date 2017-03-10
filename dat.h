@@ -303,7 +303,6 @@ enum
 
 struct Portal
 {
-	char name[32];
 	/* where it takes us to */
 	Level *to;
 	/* location in to */
@@ -363,6 +362,7 @@ enum
 
 struct Level
 {
+	char name[SZNAME];
 	int width;
 	int height;
 	Tile *tiles;

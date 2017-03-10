@@ -394,6 +394,25 @@ mattack(Monster *m, Monster *mt)
 	return 0;
 }
 
+static char*
+portalname(int tile)
+{
+	switch(tile){
+	case TSQUARE:
+		return "walkway";
+	case TUPSTAIR:
+		return "staircase going up";
+	case TDOWNSTAIR:
+		return "staircase going down";
+	case TPORTAL:
+		return "magic portal";
+	default:
+		sysfatal("no portal name for tile %d\n", tile);
+	}
+
+	return nil;
+}
+
 /* -1 bad move, 0 didn't move, 1 moved */
 int
 maction(Monster *m, int what, Point where)
@@ -443,7 +462,7 @@ maction(Monster *m, int what, Point where)
 			}
 
 			if(isyou(m) && hasflagat(m->l, where, Fportal)){
-				warn("you see a %s here.", targ->portal->name);
+				warn("you see a %s to %s here.", portalname(targ->feat), targ->portal->to->name);
 			}
 
 			return 1;
