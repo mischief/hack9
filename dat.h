@@ -348,8 +348,6 @@ struct Tile
 
 	/* index into tileset */
 	int terrain;
-
-	int flags;
 };
 
 enum
