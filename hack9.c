@@ -107,12 +107,16 @@ usage(void)
 void
 threadmain(int argc, char *argv[])
 {
+	long seed;
 	Tile *t;
 	Level *level;
+
+	seed = -1;
 
 	ARGBEGIN{
 	case 'd':
 		debug++;
+		seed = 0;
 		break;
 	default:
 		usage();
@@ -121,7 +125,9 @@ threadmain(int argc, char *argv[])
 	//#include <pool.h>
 	//mainmem->flags = POOL_PARANOIA|POOL_ANTAGONISM;
 
-	srand(truerand());
+	if(seed == -1)
+		seed = truerand();
+	srand(seed);
 
 	user = getenv("user");
 	home = getenv("home");
