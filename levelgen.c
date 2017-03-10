@@ -112,7 +112,7 @@ drunk1(Level *l, Point p, uint count, uint sbias)
 	Rectangle clipr;
 	Tile *t;
 
-	clipr = insetrect(l->r, 1);
+	clipr = insetrect(l->or, 1);
 
 	last = nrand(NCARDINAL);
 	while(count > 0){
@@ -310,6 +310,7 @@ levelexec(AIState *a)
 Level*
 mklevel(int width, int height, int floor)
 {
+	int i;
 	Point p;
 	Level *l;
 
@@ -319,7 +320,8 @@ mklevel(int width, int height, int floor)
 
 	l->width = width;
 	l->height = height;
-	l->r = Rect(0, 0, width, height);
+	l->r = Rect(0, 0, width-1, height-1);
+	l->or = Rect(0, 0, width, height);
 
 	l->tiles = mallocz(sizeof(Tile) * width * height, 1);
 	if(l->tiles == nil)
@@ -338,6 +340,9 @@ mklevel(int width, int height, int floor)
 			tileat(l, p)->terrain = floor;
 		}
 	}
+
+	for(i = 0; i < NCARDINAL; i++)
+		l->exits[i] = pickpoint(l->r, i, 2);
 
 	return l;
 

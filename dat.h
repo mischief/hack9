@@ -368,7 +368,10 @@ struct Level
 	Tile *tiles;
 	int *flags;
 
+	/* inset by 1 */
 	Rectangle r;
+	/* original rectangle */
+	Rectangle or;
 	Point up;
 	Point down;
 
@@ -376,6 +379,9 @@ struct Level
 
 	int		nspawns;
 	Spawn	spawns[10];
+
+	/* exits on each side */
+	Point	exits[NCARDINAL];
 };
 
 /* level.c */
