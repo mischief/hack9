@@ -129,6 +129,8 @@ threadmain(int argc, char *argv[])
 		seed = truerand();
 	srand(seed);
 
+	quotefmtinstall();
+
 	user = getenv("user");
 	home = getenv("home");
 

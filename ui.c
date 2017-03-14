@@ -459,6 +459,9 @@ dbgmenu(int idx, char *s, int sz)
 	case 2:
 		snprint(s, sz, "revive and gain max hp");
 		return 'r';
+	case 3:
+		snprint(s, sz, "wish for an item");
+		return 'w';
 	}
 	return Runemax;
 }
@@ -682,7 +685,9 @@ static int
 cdebug(Rune c)
 {
 	int i;
+	char buf[64];
 	KeyMenu km;
+	Item *item;
 
 	USED(c);
 
@@ -710,6 +715,18 @@ cdebug(Rune c)
 		tileat(player->l, player->pt)->monst = player;
 		tileat(player->l, player->pt)->unit = player->md->tile;
 		gameover = 0;
+		break;
+	case 3:
+		buf[0] = 0;
+		if(uienter("item?", buf, sizeof(buf), ui.mc, ui.kc, nil) > 0){
+			item = ibyname(buf);
+			if(item == nil){
+				bad("no such item %q", buf);
+				break;
+			}
+
+			maddinv(player, item);
+		}
 		break;
 	}
 	return 0;
@@ -743,8 +760,8 @@ csettings(Rune c)
 	i = menu(ui.kc, ui.mc, &km);
 	switch(i){
 	case 0:
-		snprint(buf, 64, "%d", ui.autoidle);
-		if(uienter("autoidle ms:", buf, 64, ui.mc, ui.kc, nil) > 0){
+		snprint(buf, sizeof(buf), "%d", ui.autoidle);
+		if(uienter("autoidle ms:", buf, sizeof(buf), ui.mc, ui.kc, nil) > 0){
 			ui.autoidle = atoi(buf);
 			if(ui.autoidle < 0)
 				ui.autoidle = 0;
@@ -754,7 +771,7 @@ csettings(Rune c)
 	case 1:
 		/* ±2 for stats bar */
 		snprint(buf, 64, "%d", ui.uisz-2);
-		if(uienter("log lines:", buf, 64, ui.mc, ui.kc, nil) > 0){
+		if(uienter("log lines:", buf, sizeof(buf), ui.mc, ui.kc, nil) > 0){
 			uisz = atoi(buf);
 			if(uisz < 2 || uisz > 30){
 				bad("ui size must be between 2 and 30");
