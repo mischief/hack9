@@ -23,17 +23,24 @@ item="old gloves"
 item="walking shoes"
 	tile=536 type=boots cost=5 weight=1 ac=1
 
+# consumables
+item="orange"
+	tile=645 type=consumable cost=5 weight=1 heal=5
+
 # item lists
+itemlist="food"
+	items="orange"
+
 itemlist="common"
 	items="dagger"
 	items="helmet"
 	items="tattered cape"
 	items="old gloves"
 	items="walking shoes"
+	items="food"
 itemlist="uncommon"
 	items="longsword"
 	items="shield"
 itemlist="rare"
 	items="plate armor"
 	items="runesword"
-

@@ -574,6 +574,28 @@ munwield(Monster *m, int type)
 	return 1;
 }
 
+/* somehow use the n'th item in inventory */
+int
+muse(Monster *m, int n)
+{
+	Item *item;
+
+	item = iltakenth(&m->inv, n);
+
+	switch(item->id->type){
+	case ICONSUME:
+		if(m->hp >= m->maxhp)
+			break;
+		m->hp += item->id->heal;
+		if(m->hp > m->maxhp)
+			m->hp = m->maxhp;
+		return 1;
+	}
+
+	maddinv(m, item);
+	return 0;
+}
+
 void
 maddinv(Monster *m, Item *i)
 {

@@ -618,10 +618,18 @@ cuse(Rune c)
 				bad("can't equip that");
 				return 0;
 			} else
-				good("you are now %sing the %i!", item->id->type==IWEAPON?"wield":"wear", item);
+				good("you are now %sing the %#i!", item->id->type==IWEAPON?"wield":"wear", item);
+			return 1;
+		case ICONSUME:
+			if(!muse(player, i)){
+				bad("you can't eat the %#i", item);
+				return 0;
+			}
+
+			good("you eat the %#i. tasty!", item);
 			return 1;
 		default:
-			warn("you aren't sure what to do with the %i...", item);
+			warn("you aren't sure what to do with the %#i...", item);
 			return 0;
 			break;
 		}

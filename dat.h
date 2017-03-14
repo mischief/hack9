@@ -70,7 +70,9 @@ enum
 	IARMOR,
 	IGLOVES,
 	IBOOTS,
-	NEQUIP,
+	ICONSUME,
+
+	NEQUIP = IBOOTS+1,
 
 	/* item flags */
 	IFSTACKS = 0x1,
@@ -90,12 +92,19 @@ struct ItemData
 	/* weight */
 	int weight;
 
-	/* if weapon, these are set */
-	int rolls;
-	int atk;
+	union {
+		/* if weapon, these are set */
+		struct {
+			int rolls;
+			int atk;
+		};
 
-	/* if armor, this is set */
-	int ac;
+		/* if armor, this is set */
+		int ac;
+
+		/* consumable heals */
+		int heal;
+	};
 
 	/* various flags */
 	int flags;
@@ -273,6 +282,7 @@ AIState *mpopstate(Monster *m);
 int maction(Monster *m, int what, Point where);
 int mwield(Monster *m, int n);
 int munwield(Monster *m, int type);
+int muse(Monster *m, int n);
 void maddinv(Monster *m, Item *i);
 void mgenequip(Monster *m);
 int xpcalc(int level);

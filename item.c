@@ -16,6 +16,7 @@ enum
 	ITEMWEIGHT,
 	ITEMATK,
 	ITEMAC,
+	ITEMHEAL,
 	ITEMSTACKS,
 };
 
@@ -27,7 +28,9 @@ static char *itemdbcmd[] = {
 [ITEMWEIGHT]		"weight",
 [ITEMATK]		"atk",
 [ITEMAC]		"ac",
+[ITEMHEAL]		"heal",
 [ITEMSTACKS]	"stacks",
+
 };
 
 static char *itemtype[] = {
@@ -38,6 +41,7 @@ static char *itemtype[] = {
 [IARMOR]	"armor",
 [IGLOVES]	"gloves",
 [IBOOTS]	"boots",
+[ICONSUME]	"consumable",
 };
 
 char*
@@ -76,7 +80,13 @@ ifmt(Fmt *f)
 	case IBOOTS:
 		snprint(extra, sizeof(extra), " (ac %d)", i->id->ac);
 		break;
+	case ICONSUME:
+		snprint(extra, sizeof(extra), " (heal %d)", i->id->heal);
+		break;
 	}
+
+	if(f->flags & FmtSharp)
+		return fmtprint(f, "%s%s", name, extra);
 
 	if(i->count != 1)
 		return fmtprint(f, "%d %ss%s", i->count, name, extra);
@@ -142,6 +152,9 @@ idaddattr(ItemData *id, int attr, char *val)
 	case ITEMAC:
 		id->ac = atoi(val);
 		break;
+	case ITEMHEAL:
+		id->heal = atoi(val);
+		break;
 	case ITEMSTACKS:
 		id->flags |= IFSTACKS;
 		break;
@@ -165,7 +178,7 @@ idbylistname(char *list)
 
 	t = ndbsearch(itemdb, &search, "itemlist", list);
 	if(t == nil)
-		sysfatal("no such itemlist '%s'", list);
+		return nil;
 
 	/* count items */
 	cnt = 0;
@@ -218,12 +231,10 @@ idbyname(char *item)
 	 * item list by that name. if that exits, pick a
 	 * random item from the list.
 	 */
-	if(t == nil){
+	if(t == nil)
 		return idbylistname(item);
-	}
 
-	id = mallocz(sizeof(ItemData), 1);
-	assert(id != nil);
+	id = emalloc(sizeof(ItemData));
 
 	for(nt = t; nt != nil; nt = nt->entry){
 		for(i = 0; i < nelem(itemdbcmd); i++){
@@ -240,8 +251,7 @@ okattr:
 
 	ndbfree(t);
 
-	idc = mallocz(sizeof(idcache), 1);
-	assert(idc != nil);
+	idc = emalloc(sizeof(idcache));
 
 	if(itemcache == nil){
 		itemcache = idc;
