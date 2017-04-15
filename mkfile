@@ -1,10 +1,38 @@
 </$objtype/mkfile
 
 BIN=/$objtype/bin/games
+TARG=hack9
+HFILES=\
+	dat.h\
+	alg.h\
 
-<mk.common
+OFILES=\
+	ai.$O\
+	alg.$O\
+	hack9.$O\
+	item.$O\
+	level.$O\
+	levelgen.$O\
+	monst.$O\
+	path.$O\
+	tile.$O\
+	ui.$O\
+	util.$O\
+
+CFLAGS=$CFLAGS -Ilibmap
+
+LIBMAP=libmap/libmap.$O.a
+LIB=$LIBMAP
 
 </sys/src/cmd/mkone
+
+$LIBMAP:
+	cd libmap
+	mk
+
+clean:V:
+	@{ cd libmap; mk clean }
+	rm -f *.[$OS] [$OS].out *.acid $TARG
 
 install:V:	$BIN/$TARG
 	mkdir -p /lib/hack9

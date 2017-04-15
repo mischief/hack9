@@ -1,0 +1,24 @@
+</$objtype/mkfile
+
+P=map
+
+LIB=lib$P.$O.a
+OFILES=$P.$O
+HFILES=$P.h
+
+</sys/src/cmd/mklib
+
+nuke clean:V:
+	@{ cd test; mk $target }
+	rm -f *.[$OS] [$OS].out $LIB
+
+test:QV:	$LIB
+	@{
+		cd test
+		mk clean
+		mk all
+		for(t in $O.map*){
+			echo $t...
+			./$t
+		}
+	}

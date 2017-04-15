@@ -1,0 +1,7 @@
+</$objtype/mkfile
+
+LIB=../libmap.$O.a
+CFLAGS=-FTVw -I..
+TARG=`{ls *.c | sed 's/\.c//g'}
+
+</sys/src/cmd/mkmany
