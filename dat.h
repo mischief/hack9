@@ -282,7 +282,7 @@ AIState *mpopstate(Monster *m);
 int maction(Monster *m, int what, Point where);
 int mwield(Monster *m, int n);
 int munwield(Monster *m, int type);
-int muse(Monster *m, int n);
+int muse(Monster *m, Item *i);
 void maddinv(Monster *m, Item *i);
 void mgenequip(Monster *m);
 int xpcalc(int level);

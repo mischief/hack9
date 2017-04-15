@@ -621,12 +621,14 @@ cuse(Rune c)
 				good("you are now %sing the %#i!", item->id->type==IWEAPON?"wield":"wear", item);
 			return 1;
 		case ICONSUME:
-			if(!muse(player, i)){
+			if(!muse(player, item)){
 				bad("you can't eat the %#i", item);
 				return 0;
 			}
 
 			good("you eat the %#i. tasty!", item);
+			/* consumables get used up */
+			ifree(iltakenth(&player->inv, i));
 			return 1;
 		default:
 			warn("you aren't sure what to do with the %#i...", item);
