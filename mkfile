@@ -19,10 +19,11 @@ OFILES=\
 	ui.$O\
 	util.$O\
 
-CFLAGS=$CFLAGS -Ilibmap
+CFLAGS=$CFLAGS -Ilibmap -Ilibbt
 
 LIBMAP=libmap/libmap.$O.a
-LIB=$LIBMAP
+LIBBT=libbt/libbt.$O.a
+LIB=$LIBMAP $LIBBT
 
 </sys/src/cmd/mkone
 
@@ -30,8 +31,13 @@ $LIBMAP:
 	cd libmap
 	mk
 
+$LIBBT:
+	cd libbt
+	mk
+
 clean:V:
 	@{ cd libmap; mk clean }
+	@{ cd libbt; mk clean }
 	rm -f *.[$OS] [$OS].out *.acid $TARG
 
 install:V:	$BIN/$TARG

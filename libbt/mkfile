@@ -1,0 +1,24 @@
+</$objtype/mkfile
+
+P=bt
+
+LIB=lib$P.$O.a
+OFILES=alloc.$O bt.$O cancel.$O fmt.$O tick.$O
+HFILES=$P.h
+
+</sys/src/cmd/mklib
+
+clean nuke:V:
+	@{ cd test; mk $target }
+	rm -f *.[$OS] [$OS].out $LIB
+
+test:QV:
+	@{
+		cd test
+		mk clean
+		mk all
+		for(t in $O.*){
+			echo $t...
+			./$t
+		}
+	}
