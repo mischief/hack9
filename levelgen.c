@@ -3,6 +3,9 @@
 #include <draw.h>
 #include <thread.h>
 
+#include "map.h"
+#include "bt.h"
+
 #include "dat.h"
 #include "alg.h"
 
@@ -246,8 +249,8 @@ genmonsters(Level *l, char *type, int count)
 	}
 }
 
-static void
-levelexec(AIState *a)
+static int
+levelexec(void *v)
 {
 	int i, j, n;
 	Point p, np, *neigh;
@@ -258,7 +261,7 @@ levelexec(AIState *a)
 	Monster *m;
 	Item *it;
 
-	l = a->aux;
+	l = v;
 
 	for(i = 0; i < l->nspawns; i++){
 		sp = &l->spawns[i];
@@ -305,6 +308,8 @@ levelexec(AIState *a)
 			}
 		}
 	}
+
+	return TASKSUCCESS;
 }
 
 Level*
@@ -331,8 +336,8 @@ mklevel(int width, int height, int floor)
 	if(l->flags == nil)
 		goto err1;
 
-	l->ai = mkstate("level", nil, l, nil, levelexec, nil);
-	if(l->ai == nil)
+	l->bt = btleaf("level", levelexec);
+	if(l->bt == nil)
 		goto err2;
 
 	for(p.x = 0; p.x < width; p.x++){

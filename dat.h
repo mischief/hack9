@@ -1,4 +1,3 @@
-typedef struct AIState AIState;
 typedef struct EquipData EquipData;
 typedef struct ItemData ItemData;
 typedef struct Item Item;
@@ -39,26 +38,15 @@ extern long turn;
 int isyou(Monster *m);
 int nearyou(Point p);
 
-typedef void (*AIFun)(AIState *);
-
-struct AIState
-{
-	AIState *prev;
-	char name[16];
-	Monster *m;
-	void *aux;
-	AIFun enter;
-	AIFun exec;
-	AIFun exit;
+typedef struct WalkToData WalkToData;
+struct WalkToData {
+	int next;
+	int npath;
+	Point *path;
 };
 
 /* ai.c */
-AIState *mkstate(char *name, Monster *m, void *aux, AIFun enter, AIFun exec, AIFun exit);
-void freestate(AIState *a);
 void idle(Monster *m);
-AIState* wander(Monster *m);
-AIState* walkto(Monster *m, Point p, int wait);
-AIState* attack(Monster *m, Monster *targ);
 
 enum
 {
@@ -258,8 +246,8 @@ struct Monster
 	u32int flags;
 
 	/* ai state */
-	AIState *ai;
-	AIState *aglobal;
+	BehaviorNode *bt;
+	Map *bb;
 
 	/* inventory */
 	ItemList inv;
@@ -277,8 +265,6 @@ MonsterData *mdbyname(char *monster);
 Monster *mbyname(char *monster);
 void mfree(Monster *m);
 int mupdate(Monster *m);
-void mpushstate(Monster *m, AIState *a);
-AIState *mpopstate(Monster *m);
 int maction(Monster *m, int what, Point where);
 int mwield(Monster *m, int n);
 int munwield(Monster *m, int type);
@@ -385,7 +371,7 @@ struct Level
 	Point up;
 	Point down;
 
-	AIState *ai;
+	BehaviorNode *bt;
 
 	int		nspawns;
 	Spawn	spawns[10];
@@ -429,7 +415,8 @@ void warn(char *fmt, ...);
 void bad(char *fmt, ...);
 void dbg(char *fmt, ...);
 void uiinit(char *name);
-void uiexec(AIState *ai);
+void uirun(void);
+int uibt(void *a);
 void uiredraw(int justui);
 
 /* util.c */

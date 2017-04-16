@@ -5,6 +5,9 @@
 #include <bio.h>
 #include <ndb.h>
 
+#include "map.h"
+#include "bt.h"
+
 #include "dat.h"
 
 enum
@@ -207,20 +210,12 @@ void
 mfree(Monster *m)
 {
 	int n;
-	AIState *a;
 
 	if(decref(&m->ref) != 0)
 		return;
 
-	if(m->aglobal != nil){
-		if(m->aglobal->exit != nil)
-			m->aglobal->exit(m->aglobal);
-		freestate(m->aglobal);
-	}
-	if(m->ai != nil){
-		while((a = mpopstate(m)) != nil)
-			freestate(a);
-	}
+	btfree(m->bt, m);
+	mapfree(m->bb);
 
 	for(n = 0; n < NEQUIP; n++){
 		if(m->armor[n] != nil){
@@ -230,6 +225,7 @@ mfree(Monster *m)
 
 	ilfree(&m->inv);
 
+	memset(m, 0, sizeof(Monster));
 	free(m);
 }
 
@@ -239,15 +235,7 @@ mupdate(Monster *m)
 	m->mvp += m->mvr;
 
 	while(m->mvp > 12){
-		if(m->aglobal != nil)
-			m->aglobal->exec(m->aglobal);
-		if(m->ai != nil){
-			//dbg("the %s is %sing...", m->md->name, m->ai->name);
-			if(m->ai->exec != nil)
-				m->ai->exec(m->ai);
-		} else {
-			//dbg("the %s is %sing...", m->md->name, m->aglobal->name);
-		}
+		bttick(m->bt, m);
 
 		m->mvp -= 12;
 		m->turns++;
@@ -261,32 +249,6 @@ mupdate(Monster *m)
 	}
 
 	return 0;
-}
-
-void
-mpushstate(Monster *m, AIState *a)
-{
-	assert(a != nil);
-	a->prev = m->ai;
-	m->ai = a;
-	if(a->enter != nil)
-		a->enter(a);
-}
-
-AIState*
-mpopstate(Monster *m)
-{
-	AIState *a;
-
-	if(m->ai == nil)
-		return nil;
-
-	a = m->ai;
-	if(a->exit != nil)
-		a->exit(a);
-	m->ai = a->prev;
-
-	return a;
 }
 
 /* determines what happens when a monster gets some xp */

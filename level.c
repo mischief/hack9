@@ -3,6 +3,9 @@
 #include <draw.h>
 #include <thread.h>
 
+#include "map.h"
+#include "bt.h"
+
 #include "dat.h"
 #include "alg.h"
 
@@ -103,6 +106,8 @@ freelevel(Level *l)
 	Point p;
 	Tile *t;
 
+	btfree(l->bt, l);
+
 	for(x = 0; x < l->width; x++){
 		for(y = 0; y < l->height; y++){
 			p = (Point){x, y};
@@ -119,8 +124,6 @@ freelevel(Level *l)
 
 	free(l->tiles);
 	free(l->flags);
-	if(l->ai != nil)
-		freestate(l->ai);
 	free(l);
 }
 

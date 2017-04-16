@@ -3,6 +3,9 @@
 #include <draw.h>
 #include <thread.h>
 
+#include "map.h"
+#include "bt.h"
+
 #include "dat.h"
 
 Point cardinals[] = {

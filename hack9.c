@@ -3,6 +3,9 @@
 #include <thread.h>
 #include <draw.h>
 
+#include "map.h"
+#include "bt.h"
+
 #include "dat.h"
 #include "alg.h"
 
@@ -67,8 +70,7 @@ movemons(void)
 	l = player->l;
 
 	/* run ai on level, for spawns etc */
-	if(l->ai != nil && l->ai->exec != nil)
-		l->ai->exec(l->ai);
+	bttick(l->bt, l);
 
 	for(p.x = 0; p.x < l->width; p.x++){
 		for(p.y = 0; p.y < l->height; p.y++){
@@ -166,7 +168,7 @@ threadmain(int argc, char *argv[])
 	t->monst = player;
 	setflagat(level, player->pt, Fhasmonster);
 
-	player->ai = mkstate("input", player, nil, nil, uiexec, nil);
+	player->bt = btleaf("input", uibt);
 
 	if(debug > 0){
 		player->hp = 500;
@@ -180,4 +182,3 @@ threadmain(int argc, char *argv[])
 			movemons();
 	}
 }
-

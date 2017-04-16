@@ -5,6 +5,9 @@
 #include <bio.h>
 #include <ndb.h>
 
+#include "map.h"
+#include "bt.h"
+
 #include "dat.h"
 
 enum

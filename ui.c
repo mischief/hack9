@@ -5,6 +5,9 @@
 #include <keyboard.h>
 #include <mouse.h>
 
+#include "map.h"
+#include "bt.h"
+
 #include "dat.h"
 #include "alg.h"
 
@@ -311,11 +314,13 @@ drawlevel(Level *l, Tileset *ts, Rectangle r)
 					stringbg(screen, p2, display->white, ZP, smallfont, buf, display->black, ZP);
 					/* debugging the ai state */
 					if(debug){
+/*
 						if(m->ai != nil){
 							stringbg(screen, sp, display->white, ZP, smallfont, m->ai->name, display->black, ZP);
 						} else {
 							stringbg(screen, sp, display->white, ZP, smallfont, m->aglobal->name, display->black, ZP);
 						}
+*/
 					}
 				} else if(hasflagat(l, p, Fhasitem)){
 					drawtile(ts, screen, sp, ilnth(&t->items, 0)->id->tile);
@@ -854,13 +859,11 @@ chelp(Rune c)
 }
 
 void
-uiexec(AIState *ai)
+uirun(void)
 {
 	int al;
 	Rune c;
 	Msg *l, *lp;
-
-	USED(ai);
 
 	enum { ALOG, ATICK, AMOUSE, ARESIZE, AKEYBOARD, AEND };
 	Alt a[AEND+1] = {
@@ -950,6 +953,14 @@ uiexec(AIState *ai)
 			return;
 		}
 	}
+}
+
+int
+uibt(void *a)
+{
+	USED(a);
+	uirun();
+	return TASKSUCCESS;
 }
 
 static int
