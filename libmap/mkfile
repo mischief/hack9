@@ -1,10 +1,6 @@
 </$objtype/mkfile
 
-P=map
-
-LIB=lib$P.$O.a
-OFILES=$P.$O
-HFILES=$P.h
+<mk.common
 
 </sys/src/cmd/mklib
 

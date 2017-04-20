@@ -1,10 +1,6 @@
 </$objtype/mkfile
 
-P=bt
-
-LIB=lib$P.$O.a
-OFILES=alloc.$O bt.$O cancel.$O fmt.$O tick.$O
-HFILES=$P.h
+<mk.common
 
 </sys/src/cmd/mklib
 

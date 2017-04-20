@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
 
-#include <bt.h>
+#include "bt.h"
 #include "impl.h"
 
 /* -1 on failure, >= 0 on success */

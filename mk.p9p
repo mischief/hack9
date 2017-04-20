@@ -2,5 +2,27 @@
 
 <mk.common
 
+CFLAGS=$CFLAGS -Ilibmap -Ilibbt
+
+LIBMAP=libmap/libmap.$O.a
+LIBBT=libbt/libbt.$O.a
+LIB=$LIBMAP $LIBBT
+
 <$PLAN9/src/mkone
+
+$LIBMAP:
+	cd libmap
+	mk -f mk.p9p
+
+$LIBBT:
+	cd libbt
+	mk -f mk.p9p
+
+clean:V:
+	cd libmap; mk -f mk.p9p clean; cd ..
+	cd libbt; mk -f mk.p9p clean; cd ..
+	rm -f *.[$OS] [$OS].out *.acid $TARG
+
+$O.alg:	algtest.$O alg.$O
+	$LD -o $target $prereq
 

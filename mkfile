@@ -1,23 +1,8 @@
 </$objtype/mkfile
 
 BIN=/$objtype/bin/games
-TARG=hack9
-HFILES=\
-	dat.h\
-	alg.h\
 
-OFILES=\
-	ai.$O\
-	alg.$O\
-	hack9.$O\
-	item.$O\
-	level.$O\
-	levelgen.$O\
-	monst.$O\
-	path.$O\
-	tile.$O\
-	ui.$O\
-	util.$O\
+<mk.common
 
 CFLAGS=$CFLAGS -Ilibmap -Ilibbt
 
