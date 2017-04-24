@@ -234,5 +234,9 @@ bttick(BehaviorNode *node, void *agent)
 	assert(node->type < nelem(tickfns));
 
 	node->status = tickfns[node->type](node, agent);
+
+	if(node->end != nil && (node->status == TASKFAIL || node->status == TASKSUCCESS))
+		node->end(agent);
+
 	return node->status;
 }

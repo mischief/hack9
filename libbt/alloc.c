@@ -191,7 +191,15 @@ btinvert(char *name, BehaviorNode *child)
 void
 btsetguard(BehaviorNode *node, BehaviorNode *guard)
 {
-	node->guard = guard;
+	if(node != nil)
+		node->guard = guard;
+}
+
+void
+btsetend(BehaviorNode *node, void (*end)(void*))
+{
+	if(node != nil)
+		node->end = end;
 }
 
 static void

@@ -13,6 +13,7 @@ struct BehaviorNode {
 	short ref;
 	int status;
 	BehaviorNode *guard;
+	void (*end)(void*);
 	char name[16];
 };
 

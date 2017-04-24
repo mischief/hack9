@@ -28,6 +28,9 @@ BehaviorNode *btinvert(char*, BehaviorNode*);
 /* set guard function for node */
 void btsetguard(BehaviorNode*, BehaviorNode*);
 
+/* set end function for a node */
+void btsetend(BehaviorNode*, void (*)(void*));
+
 void btcancel(BehaviorNode*, void*);
 void btfree(BehaviorNode*, void*);
 int bttick(BehaviorNode*, void*);
