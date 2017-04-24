@@ -699,8 +699,8 @@ cwait(Rune c)
 static int
 cdebug(Rune c)
 {
-	int i;
-	char buf[64];
+	int i, n;
+	char buf[64], *rptr;
 	KeyMenu km;
 	Item *item;
 
@@ -734,13 +734,19 @@ cdebug(Rune c)
 	case 3:
 		buf[0] = 0;
 		if(uienter("item?", buf, sizeof(buf), ui.mc, ui.kc, nil) > 0){
-			item = ibyname(buf);
-			if(item == nil){
-				bad("no such item %q", buf);
-				break;
-			}
+			n = strtol(buf, &rptr, 0);
+			if(n == 0 && rptr == buf)
+				n = 1;
+			rptr += strspn(rptr, " ");
 
-			maddinv(player, item);
+			for(i = 0; i < n; i++){
+				item = ibyname(rptr);
+				if(item == nil){
+					bad("no such item %q", rptr);
+					return 0;
+				}
+				maddinv(player, item);
+			}
 		}
 		break;
 	}
