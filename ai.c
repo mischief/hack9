@@ -20,6 +20,7 @@ enum
 	AIPOINT	= 0,
 	AIINT,
 	AIMONST,
+	AIITEM,
 	AIPATH,
 	AIWALKTO,
 };
@@ -32,6 +33,7 @@ struct AiData
 		int i;
 		Point pt;
 		Monster *m;
+		Item *it;
 		Point *path;
 		WalkToData *wd;
 	};
@@ -50,6 +52,9 @@ aivfree(void *v)
 	switch(d->type){
 	case AIMONST:
 		mfree(d->m);
+		break;
+	case AIITEM:
+		ifree(d->it);
 		break;
 	case AIPATH:
 		free(d->path);
@@ -94,6 +99,14 @@ aimonst(Monster *m)
 	d->m = m;
 	return d;
 }
+
+AiData*
+aiitem(Item *i)
+{
+	AiData *d = aidata(AIITEM);
+	d->it = i;
+	return d;
+}	
 
 AiData*
 aipath(Point *path)
@@ -200,6 +213,16 @@ planpathwander(void *v)
 }
 
 static int
+planpathgetstuff(void *v)
+{
+	Monster *m;
+
+	m = v;
+
+	return planpathkey(m, "getstuff_dst", "getstuff_offset", "getstuff_data");
+}
+
+static int
 planpathattack(void *v)
 {
 	Monster *m;
@@ -221,20 +244,28 @@ walktoinner(Monster *m, char *data)
 
 	wd = dwd->wd;
 
-	if(wd->next == wd->npath)
+	if(wd->next == wd->npath){
+		mapdelete(m->bb, data);
 		return TASKSUCCESS;
+	}
 
-	np = wd->path[wd->next++];
+	np = wd->path[wd->next];
 
 	/* could just call maction(m,MMOVE,np) but
 	 * this prevents friendly fire
 	 */
-	if(hasflagat(m->l, np, Fhasmonster|Fblocked))
+	if(hasflagat(m->l, np, Fhasmonster|Fblocked)){
+		mapdelete(m->bb, data);
 		return TASKFAIL;
+	}
 
 	int rv = maction(m, MMOVE, np);
-	if(rv != 1)
+	if(rv != 1){
+		mapdelete(m->bb, data);
 		return TASKFAIL;
+	}
+
+	wd->next++;
 
 	return TASKRUNNING;
 }
@@ -250,6 +281,14 @@ walktowander(void *v)
 }
 
 static int
+walktogetstuff(void *v)
+{
+	Monster *m;
+	m = v;
+	return walktoinner(m, "getstuff_data");
+}
+
+static int
 walktoattack(void *v)
 {
 	Monster *m;
@@ -261,41 +300,17 @@ enum {
 	ATTACKRADIUS	= 6,
 };
 
-static int
-checkenemy(Monster *m, Monster *target)
-{
-	if(m == target)
-		return -1;
-	if(target->flags & Mdead)
-		return -1;
-	if(abs(m->align - target->align) <= 15)
-		return -1;
-	return 0;
-}
+typedef int (*checktile)(Monster *m, Level *l, Point p);
 
 static int
-findenemy(void *v)
+findthing(Monster *m, Level *l, int radius, checktile ct)
 {
 	int i, r, xd, yd, xs, ys;
 	Point c, p, s;
-	Tile *t;
-	Monster *m, *target;
-	AiData *dtgt;
 
-	m = v;
 	c = m->pt;
 
-	r = ATTACKRADIUS;
-
-	target = nil;
-
-	/* check if we already have a target */
-	dtgt = mapget(m->bb, "attack_target");
-	if(dtgt != nil)
-		target = dtgt->m;
-
-	if(target != nil && checkenemy(m, target) == 0)
-		return TASKSUCCESS;
+	r = radius;
 
 	for(p.x = c.x; p.x >= c.x - r; p.x--){
 		for(p.y = c.y; p.y >= c.y - r; p.y--){
@@ -316,28 +331,70 @@ findenemy(void *v)
 
 				if(!ptinrect(s, m->l->r))
 					continue;
-				if(!hasflagat(m->l, s, Fhasmonster))
-					continue;
 
-				t = tileat(m->l, s);
-				target = t->monst;
-
-				if(checkenemy(m, target) != 0)
-					continue;
-
-				//fprint(2, "FINDENEMY: %s %P\n", target->md->name, target->pt);
-
-				/* found a suitable target */
-				incref(&target->ref);
-				if(mapset(m->bb, "attack_target", aimonst(target)) < 0)
-					OOM();
-
-				return TASKSUCCESS;
+				if(ct(m, l, s) == 0)
+					return TASKSUCCESS;
 			}
 		}
 	}
 
 	return TASKFAIL;
+}
+
+static int
+checkenemy(Monster *m, Monster *target)
+{
+	if(m == target)
+		return -1;
+	if(target->flags & Mdead)
+		return -1;
+	if(abs(m->align - target->align) <= 15)
+		return -1;
+	return 0;
+}
+
+static int
+checkenemy2(Monster *m, Level *l, Point p)
+{
+	Tile *t;
+	Monster *target;
+
+	if(!hasflagat(l, p, Fhasmonster))
+		return -1;
+
+	t = tileat(l, p);
+	target = t->monst;
+
+	if(checkenemy(m, target) != 0)
+		return -1;
+
+	/* found a suitable target */
+	incref(&target->ref);
+	if(mapset(m->bb, "attack_target", aimonst(target)) < 0)
+		OOM();
+
+	return 0;
+}
+
+static int
+findenemy(void *v)
+{
+	Monster *m, *target;
+	AiData *dtgt;
+
+	m = v;
+
+	target = nil;
+
+	/* check if we already have a target */
+	dtgt = mapget(m->bb, "attack_target");
+	if(dtgt != nil)
+		target = dtgt->m;
+
+	if(target != nil && checkenemy(m, target) == 0)
+		return TASKSUCCESS;
+
+	return findthing(m, m->l, ATTACKRADIUS, checkenemy2);
 }
 
 static int
@@ -405,6 +462,132 @@ bnidle(void)
 	return bnwalkto;	
 }
 
+static int
+checkitem(Monster *m, Level *l, Point p)
+{
+	int typ;
+	Tile *t;
+	Item *target;
+
+	if(!hasflagat(l, p, Fhasitem))
+		return -1;
+
+	if(hasflagat(l, p, Fhasmonster))
+		return -1;
+
+	/* something is here */
+	t = tileat(l, p);
+	target = ilnth(&t->items, 0);
+
+	typ = target->id->type;
+
+	/* if we can't use it, forget it */
+	if(typ < NEQUIP && m->armor[typ] != nil)
+		return -1;
+
+	incref(&target->ref);
+	if(mapset(m->bb, "getstuff_target", aiitem(target)) < 0)
+		OOM();
+	if(mapset(m->bb, "getstuff_dst", aipt(p)) < 0)
+		OOM();
+	if(mapset(m->bb, "getstuff_offset", aiint(0)) < 0)
+		OOM();
+
+	return 0;
+}
+
+static int
+findstuff(void *v)
+{
+	Monster *m;
+	AiData *itgt, *idst, *ioff;
+
+	m = v;
+
+	/* make sure it is still there */
+	itgt = mapget(m->bb, "getstuff_target");
+	idst = mapget(m->bb, "getstuff_dst");
+	ioff = mapget(m->bb, "getstuff_offset");
+	if(itgt != nil && idst != nil && ioff != nil)
+		return TASKSUCCESS;
+
+	return findthing(m, m->l, 6, checkitem);
+}
+
+static int
+ontop(void *v)
+{
+	Monster *m;
+	AiData *idst;
+
+	m = v;
+
+	idst = mapget(m->bb, "getstuff_dst");
+	if(idst == nil || !eqpt(m->pt, idst->pt))
+		return TASKFAIL;
+
+	return TASKSUCCESS;
+}
+
+static int
+pickup(void *v)
+{
+	Monster *m;
+	AiData *itgt;
+
+	m = v;
+
+	itgt = mapget(m->bb, "getstuff_target");
+	msg("the %s picks up a %i", m->md->name, itgt->it);
+
+	if(maction(m, MPICKUP, m->pt) < 0)
+		return TASKFAIL;
+
+	return TASKSUCCESS;
+}
+
+static void
+getend(void *v)
+{
+	Monster *m;
+
+	m = v;
+
+	mapdelete(m->bb, "getstuff_target");
+	mapdelete(m->bb, "getstuff_dst");
+	mapdelete(m->bb, "getstuff_offset");
+	mapdelete(m->bb, "getstuff_data");
+}
+
+static BehaviorNode*
+bngetstuff(void)
+{
+	BehaviorNode *bnifind;
+	BehaviorNode *bnroute, 	*bnontop, *bnplanpath, *bnwalkto;
+	BehaviorNode *bnpickup;
+	BehaviorNode *bnget;
+
+	bnifind = btleaf("getstuff find", findstuff);
+	bnontop = btleaf("ontop of stuff", ontop);
+	bnplanpath = btleaf("getstuff plan path", planpathgetstuff);
+	bnwalkto = btleaf("getstuff move", walktogetstuff);
+
+	/* either we are on top of our target, or walk to it */
+	bnroute = btparallel("getstuff route", 1, 2,
+		bnontop,
+		btsequence("getstuff walk", bnplanpath, bnwalkto, nil),
+		nil);
+
+	bnpickup = btleaf("getstuff pickup", pickup);
+
+	bnget = btsequence("getstuff", bnroute, bnpickup, nil);
+
+	btsetguard(bnget, bnifind);
+	btsetend(bnget, getend);
+
+	return bnget;
+}
+
 static BehaviorNode*
 bnattack(void)
 {
@@ -426,6 +609,64 @@ bnattack(void)
 	return bnatk;
 }
 
+static int
+haveequip(void *v)
+{
+	int i, typ;
+	Monster *m;
+	Item *it;
+
+	m = v;
+
+	for(i = 0; (it = ilnth(&m->inv, i)) != nil; i++){
+		typ = it->id->type;
+
+		if(typ < NEQUIP && m->armor[typ] == nil)
+			break;
+	}
+
+	if(it == nil)
+		return TASKFAIL;
+
+	dbg("equip %i", it);
+
+	if(mapset(m->bb, "equip_inv_slot", aiint(i)) < 0)
+		OOM();
+	return TASKSUCCESS;
+}
+
+static int
+equipstuff(void *v)
+{
+	int slot;
+	Monster *m;
+	AiData *dslot;
+
+	m = v;
+
+	dslot = mapget(m->bb, "equip_inv_slot");
+	slot = dslot->i;
+	mapdelete(m->bb, "equip_inv_slot");
+
+	warn("the %s equips a %i!", m->md->name, ilnth(&m->inv, slot));
+
+	assert(mwield(m, slot) == 1);
+	return TASKSUCCESS;
+}
+
+static BehaviorNode*
+bnequip(void)
+{
+	BehaviorNode *bnhave, *bnuse;
+
+	bnhave = btleaf("have equip", haveequip);
+	bnuse = btleaf("equip item", equipstuff);
+
+	btsetguard(bnuse, bnhave);
+
+	return bnuse;
+}
+
 void
 idle(Monster *m)
 {
@@ -436,7 +677,10 @@ idle(Monster *m)
 	if(map == nil)
 		OOM();
 
-	root = btdynguard("root", bnattack(), bnidle(), nil);
+	if(nrand(10) > 3)
+		root = btdynguard("root", bnattack(), bnequip(), bngetstuff(), bnidle(), nil);
+	else
+		root = btdynguard("root", bnequip(), bngetstuff(), bnattack(), bnidle(), nil);
 
 	if(root == nil)
 		OOM();
