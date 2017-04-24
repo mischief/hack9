@@ -234,7 +234,7 @@ mupdate(Monster *m)
 {
 	m->mvp += m->mvr;
 
-	while(m->mvp > 12){
+	while(m->mvp >= 12){
 		bttick(m->bt, m);
 
 		m->mvp -= 12;
