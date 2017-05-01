@@ -102,7 +102,7 @@ movemons(void)
 static void
 usage(void)
 {
-	fprint(2, "usage: %s [-d]", argv0);
+	fprint(2, "usage: %s [-d]\n", argv0);
 	threadexitsall("usage");
 }
 
@@ -118,7 +118,9 @@ threadmain(int argc, char *argv[])
 	ARGBEGIN{
 	case 'd':
 		debug++;
-		seed = 0;
+		break;
+	case 'S':
+		seed = atoi(EARGF(usage()));
 		break;
 	default:
 		usage();
@@ -130,6 +132,9 @@ threadmain(int argc, char *argv[])
 	if(seed == -1)
 		seed = truerand();
 	srand(seed);
+
+	if(debug)
+		fprint(2, "seed %ld\n", seed);
 
 	quotefmtinstall();
 
