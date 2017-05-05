@@ -391,7 +391,7 @@ Tile *tileat(Level *l, Point p);
 #define clrflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) &= ~(F))
 
 /* levelgen.c */
-Level *mklevel(int width, int height, int floor);
+Level *mklevel(int width, int height, int floor, char *name);
 void several(Level *l, Point *p, int count, char *type, int r);
 int mkldebug(Level *l);
 int mklforest(Level *l);

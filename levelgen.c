@@ -313,7 +313,7 @@ levelexec(void *v)
 }
 
 Level*
-mklevel(int width, int height, int floor)
+mklevel(int width, int height, int floor, char *name)
 {
 	int i;
 	Point p;
@@ -322,6 +322,8 @@ mklevel(int width, int height, int floor)
 	l = mallocz(sizeof(Level), 1);
 	if(l == nil)
 		return nil;
+
+	snprint(l->name, sizeof(l->name), "%s", name);
 
 	l->width = width;
 	l->height = height;

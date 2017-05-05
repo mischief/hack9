@@ -93,7 +93,7 @@ genlevel(int width, int height, int type)
 		if(l != nil)
 			freelevel(l);
 
-		l = mklevel(width, height, TFLOOR);
+		l = mklevel(width, height, TFLOOR, "somewhere");
 	} while(gen(l, type) < 0);
 
 	return l;
