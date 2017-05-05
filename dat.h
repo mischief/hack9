@@ -362,7 +362,7 @@ struct Level
 	int width;
 	int height;
 	Tile *tiles;
-	int *flags;
+	u16int *flags;
 
 	/* inset by 1 */
 	Rectangle r;
