@@ -61,18 +61,41 @@ lclearrect(Level *l, Rectangle r)
 }
 
 static void
-lfillrect(Level *l, Rectangle r, int type)
+lfeature(Level *l, Point p, int type, int flags)
 {
-	Point p;
 	Tile *t;
 
-	for(p.x = r.min.x; p.x <= r.max.x; p.x++){
-		for(p.y = r.min.y; p.y <= r.max.y; p.y++){
-			t = tileat(l, p);
-			t->feat = type;
-			flagat(l, p) = (Fblocked|Fhasfeature);
-		}
-	}
+	t = tileat(l, p);
+	t->feat = type;
+
+	flagat(l, p) = flags;
+}
+
+static void
+lfeatrect(Level *l, Rectangle r, int type, int flags)
+{
+	Point p;
+
+	for(p.x = r.min.x; p.x <= r.max.x; p.x++)
+		for(p.y = r.min.y; p.y <= r.max.y; p.y++)
+			lfeature(l, p, type, flags);
+}
+
+static void
+lportal(Level *l, Point p, int feat, Level *to, Point tp)
+{
+	Tile *t;
+	Portal *port;
+
+	lfeature(l, p, feat, Fhasfeature);
+
+	port = emalloc(sizeof(Portal));
+	port->to = to;
+	port->pt = tp;
+
+	t = tileat(l, p);
+
+	t->portal = port;
 }
 
 static void
@@ -91,93 +114,79 @@ lborder(Level *l, Rectangle r, int i, int type)
 
 	tmp = Rect(r.min.x, r.min.y, r.max.x, r.min.y+i);
 	lclearrect(l, tmp);
-	lfillrect(l, tmp, type);
+	lfeatrect(l, tmp, type, Fblocked|Fhasfeature);
 
 	tmp = Rect(r.min.x, r.max.y-i, r.max.x, r.max.y);
 	lclearrect(l, tmp);
-	lfillrect(l, tmp, type);
+	lfeatrect(l, tmp, type, Fblocked|Fhasfeature);
 
 	tmp = Rect(r.min.x, r.min.y+i, r.min.x+i, r.max.y-i);
 	lclearrect(l, tmp);
-	lfillrect(l, tmp, type);
+	lfeatrect(l, tmp, type, Fblocked|Fhasfeature);
 
 	tmp = Rect(r.max.x-i, r.min.y+i, r.max.x, r.max.y-i);
 	lclearrect(l, tmp);
-	lfillrect(l, tmp, type);
+	lfeatrect(l, tmp, type, Fblocked|Fhasfeature);
 }
 
-/* more sbias makes it straighter. */
 static void
-drunk1(Level *l, Point p, uint count, uint sbias)
+lspawn(Level *l, Point p, char *what, int freq, int istrap)
 {
-	int cur, last;
-	Point next;
-	Rectangle clipr;
-	Tile *t;
+	Spawn sp;
 
-	clipr = insetrect(l->or, 1);
-
-	last = nrand(NCARDINAL);
-	while(count > 0){
-		if(nrand(sbias+1) == 0)
-			cur = nrand(NCARDINAL);
-		else
-			cur = last;
-		next = addpt(p, cardinals[cur]);
-		if(!ptinrect(next, clipr))
-			continue;
-		last = cur;
-		p = next;
-		if(!eqpt(p, l->up) && !eqpt(p, l->down) && hasflagat(l, p, Fblocked|Fhasfeature)){
-			t = tileat(l, p);
-			t->feat = 0;
-			flagat(l, p) = 0;
-			count--;
-		}
+	if(l->nspawns < nelem(l->spawns)-1){
+		sp.pt = p;
+		strcpy(sp.what, what);
+		sp.freq = freq;
+		sp.turn = nrand(1000);
+		sp.istrap = istrap;
+		l->spawns[l->nspawns++] = sp;
+		tileat(l, p)->feat = TSPAWN;
+		setflagat(l, p, Fhasfeature);
 	}
 }
 
-/*
- * drunken performs the drunkard's walk. as s1 and
- * s2 increase, the paths become more biased toward
- * 'straight'. it loops until the downstairs is
- * reachable from the upstairs.
- */
-static int
-drunken(Level *l, int type, int howmuch, int s1, int s2)
+static void
+lrandstairs(Level *l)
 {
-	int cnt, npath, redos;
-	Point p, *path;
-	Tile *t;
+	Rectangle in;
+	Point pup, pdown;
 
-	cnt = ((l->width * l->height) / howmuch); //* 2;
-	redos = 0;
+	in = insetrect(l->r, 3);
 
-redo:
-	if(redos++ > 10)
-		return 0;
-	/* fill */
-	for(p.x = 0; p.x < l->width; p.x++){
-		for(p.y = 0; p.y < l->height; p.y++){
-			if(!hasflagat(l, p, Fblocked|Fhasfeature)){
-				t = tileat(l, p);
-				t->feat = type;
-				flagat(l, p) = (Fblocked|Fhasfeature);
-			}
-		}
+	pup = (Point){nrand(Dx(in))+3, nrand(Dy(in))+3};
+	do {
+		pdown = (Point){nrand(Dx(in))+3, nrand(Dy(in))+3};
+	} while(eqpt(pdown, pup) || manhattan(pdown, pup) < ORTHOCOST*15);
+
+	l->up = pup;
+	l->down = pdown;
+
+	lportal(l, pup, TUPSTAIR, nil, ZP);
+	lportal(l, pdown, TDOWNSTAIR, nil, ZP);
+}
+
+static int
+lgen(Level *l, int type)
+{
+	lrandstairs(l);
+
+	switch(type){
+	case 0:
+		mkldebug(l);
+		break;
+	case 1:
+		mklforest(l);
+		break;
+	case 2:
+		mklgraveyard(l);
+		break;
+	case 3:
+		mklvolcano(l);
+		break;
 	}
 
-	drunk1(l, l->up, cnt/2, s1);
-	drunk1(l, l->down, cnt/2, s2);
-
-	/* check reachability */
-	npath = pathfind(l, l->up, l->down, &path, Fblocked);
-	if(npath < 0)
-		goto redo;
-	else
-		free(path);
-
-	return cnt * 2;
+	return 0;
 }
 
 /* create a monster in the idle state */
@@ -229,28 +238,9 @@ several(Level *l, Point *p, int count, char *type, int r)
 	}
 }
 
-/* genmonsters spawns count of type monsters at random places on l. */
-static void
-genmonsters(Level *l, char *type, int count)
-{
-	int i;
-	Point p;
-	Tile *t;
-
-	for(i = 0; i < count; i++){
-		do{
-			p = (Point){nrand(l->width), nrand(l->height)};
-		}while(hasflagat(l, p, Fhasmonster|Fhasfeature|Fblocked));
-
-		t = tileat(l, p);
-		t->monst = mkmons(l, p, type);
-		t->unit = t->monst->md->tile;
-		setflagat(l, p, Fhasmonster);
-	}
-}
-
+/* AI function for levels */
 static int
-levelexec(void *v)
+lexec(void *v)
 {
 	int i, j, n;
 	Point p, np, *neigh;
@@ -312,8 +302,8 @@ levelexec(void *v)
 	return TASKSUCCESS;
 }
 
-Level*
-mklevel(int width, int height, int floor, char *name)
+static Level*
+lmk(int width, int height, int floor, char *name)
 {
 	int i;
 	Point p;
@@ -338,7 +328,7 @@ mklevel(int width, int height, int floor, char *name)
 	if(l->flags == nil)
 		goto err1;
 
-	l->bt = btleaf("level", levelexec);
+	l->bt = btleaf("level", lexec);
 	if(l->bt == nil)
 		goto err2;
 
@@ -360,6 +350,112 @@ err1:
 err0:
 	free(l);
 	return nil;
+}
+
+Level*
+lgenerate(int width, int height, int type)
+{
+	Level *l;
+
+	l = nil;
+
+	do {
+		if(l != nil)
+			lfree(l);
+
+		l = lmk(width, height, TFLOOR, "somewhere");
+	} while(lgen(l, type) < 0);
+
+	return l;
+}
+/* more sbias makes it straighter. */
+static void
+drunk1(Level *l, Point p, uint count, uint sbias)
+{
+	int cur, last;
+	Point next;
+	Rectangle clipr;
+	Tile *t;
+
+	clipr = insetrect(l->or, 1);
+
+	last = nrand(NCARDINAL);
+	while(count > 0){
+		if(nrand(sbias+1) == 0)
+			cur = nrand(NCARDINAL);
+		else
+			cur = last;
+		next = addpt(p, cardinals[cur]);
+		if(!ptinrect(next, clipr))
+			continue;
+		last = cur;
+		p = next;
+		if(!eqpt(p, l->up) && !eqpt(p, l->down) && hasflagat(l, p, Fblocked|Fhasfeature)){
+			t = tileat(l, p);
+			t->feat = 0;
+			flagat(l, p) = 0;
+			count--;
+		}
+	}
+}
+
+/*
+ * drunken performs the drunkard's walk. as s1 and
+ * s2 increase, the paths become more biased toward
+ * 'straight'. it loops until the downstairs is
+ * reachable from the upstairs.
+ */
+static int
+drunken(Level *l, int type, int howmuch, int s1, int s2)
+{
+	int cnt, npath, redos;
+	Point p, *path;
+
+	cnt = ((l->width * l->height) / howmuch); //* 2;
+	redos = 0;
+
+redo:
+	if(redos++ > 10)
+		return 0;
+	/* fill */
+	for(p.x = 0; p.x < l->width; p.x++){
+		for(p.y = 0; p.y < l->height; p.y++){
+			if(!hasflagat(l, p, Fblocked|Fhasfeature))
+				lfeature(l, p, type, Fblocked|Fhasfeature);
+		}
+	}
+
+	drunk1(l, l->up, cnt/2, s1);
+	drunk1(l, l->down, cnt/2, s2);
+
+	/* check reachability */
+	npath = pathfind(l, l->up, l->down, &path, Fblocked);
+	if(npath < 0)
+		goto redo;
+	else
+		free(path);
+
+	return cnt * 2;
+}
+
+/* genmonsters spawns count of type monsters at random places on l. */
+static void
+genmonsters(Level *l, char *type, int count)
+{
+	int i;
+	Point p;
+	Tile *t;
+
+	for(i = 0; i < count; i++){
+		do{
+			p = (Point){nrand(l->width), nrand(l->height)};
+		}while(hasflagat(l, p, Fhasmonster|Fhasfeature|Fblocked));
+
+		t = tileat(l, p);
+		t->monst = mkmons(l, p, type);
+		t->unit = t->monst->md->tile;
+		setflagat(l, p, Fhasmonster);
+	}
 }
 
 int
@@ -401,18 +497,18 @@ mklforest(Level *l)
 	lclear(l, p, 2);
 	several(l, &p, 1, "captain", 0);
 	several(l, &p, 1, "lieutenant", 1);
-	addspawn(l, p, "soldier", 57, 2);
-	addspawn(l, p, "sergeant", 91, 1);
-	addspawn(l, p, "lieutenant", 97, 1);
-	addspawn(l, p, "captain", 131, 1);
+	lspawn(l, p, "soldier", 57, 2);
+	lspawn(l, p, "sergeant", 91, 1);
+	lspawn(l, p, "lieutenant", 97, 1);
+	lspawn(l, p, "captain", 131, 1);
 
 	lclear(l, p2, 2);
 	several(l, &p2, 1, "gnome king", 0);
 	several(l, &p2, 1, "gnome wizard", 1);
-	addspawn(l, p2, "gnome", 13, 1);
-	addspawn(l, p2, "gnome lord", 17, 2);
-	addspawn(l, p2, "gnome wizard", 27, 1);
-	addspawn(l, p2, "gnome king", 101, 1);
+	lspawn(l, p2, "gnome", 13, 1);
+	lspawn(l, p2, "gnome lord", 17, 2);
+	lspawn(l, p2, "gnome wizard", 27, 1);
+	lspawn(l, p2, "gnome king", 101, 1);
 
 	/* don't start empty */
 	genmonsters(l, "gnome lord", space/128);
@@ -444,18 +540,18 @@ mklgraveyard(Level *l)
 	lclear(l, p, 2);
 	lclear(l, p2, 2);
 
-	addspawn(l, p, "lich", 101, 1);
-	addspawn(l, p, "demilich", 157, 0);
-	addspawn(l, p, "ghost", 15, 2);
-	addspawn(l, p, "human zombie", 27, 2);
-	addspawn(l, p, "skeleton", 71, 1);
+	lspawn(l, p, "lich", 101, 1);
+	lspawn(l, p, "demilich", 157, 0);
+	lspawn(l, p, "ghost", 15, 2);
+	lspawn(l, p, "human zombie", 27, 2);
+	lspawn(l, p, "skeleton", 71, 1);
 
 	several(l, &p2, 1, "gnome king", 0);
 	several(l, &p2, 1, "gnome wizard", 1);
-	addspawn(l, p2, "gnome", 29, 1);
-	addspawn(l, p2, "gnome lord", 45, 2);
-	addspawn(l, p2, "gnome wizard", 57, 2);
-	addspawn(l, p2, "gnome king", 71, 1);
+	lspawn(l, p2, "gnome", 29, 1);
+	lspawn(l, p2, "gnome lord", 45, 2);
+	lspawn(l, p2, "gnome wizard", 57, 2);
+	lspawn(l, p2, "gnome king", 71, 1);
 
 	genmonsters(l, "ghost", space/64);
 	genmonsters(l, "gnome", space/64);
@@ -486,8 +582,8 @@ mklvolcano(Level *l)
 	lclear(l, p, 2);
 	lclear(l, p2, 2);
 
-	addspawn(l, p, "large cat", 77, 0);
-	addspawn(l, p2, "gnome lord", 27, 2);
+	lspawn(l, p, "large cat", 77, 0);
+	lspawn(l, p2, "gnome lord", 27, 2);
 
 	genmonsters(l, "large cat", space/128);
 	genmonsters(l, "gnome lord", space/64);
@@ -519,7 +615,7 @@ mklcastle(Level *l)
 
 	lclearrect(l, Rpt(p, addpt(p, Pt(0,1))));
 
-	addspawn(l, addpt(mid.min, Pt(Dx(mid)/2, Dy(mid)/2)), "soldier", 21, 0);
+	lspawn(l, addpt(mid.min, Pt(Dx(mid)/2, Dy(mid)/2)), "soldier", 21, 0);
 
 	l->up = Pt(1,1);
 	l->down = Pt(4,1);

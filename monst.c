@@ -439,7 +439,7 @@ maction(Monster *m, int what, Point where)
 			m = cur->monst;
 			cur->monst = nil;
 			if(cur->portal->to == nil){
-				if((cur->portal->to = genlevel(nrand(20)+50, nrand(20)+20, nrand(3)+1)) == nil)
+				if((cur->portal->to = lgenerate(nrand(20)+50, nrand(20)+20, nrand(3)+1)) == nil)
 					sysfatal("genlevel: %r");
 
 				cur->portal->pt = cur->portal->to->up;

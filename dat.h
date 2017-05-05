@@ -381,9 +381,7 @@ struct Level
 };
 
 /* level.c */
-Level *genlevel(int width, int height, int type);
-void freelevel(Level *l);
-void addspawn(Level *l, Point p, char *what, int freq, int istrap);
+void lfree(Level *l);
 Tile *tileat(Level *l, Point p);
 #define flagat(l, p) (*(l->flags+(p.y*l->width)+p.x))
 #define hasflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) & (F))
@@ -391,8 +389,7 @@ Tile *tileat(Level *l, Point p);
 #define clrflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) &= ~(F))
 
 /* levelgen.c */
-Level *mklevel(int width, int height, int floor, char *name);
-void several(Level *l, Point *p, int count, char *type, int r);
+Level *lgenerate(int width, int height, int type);
 int mkldebug(Level *l);
 int mklforest(Level *l);
 int mklgraveyard(Level *l);

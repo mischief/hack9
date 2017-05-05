@@ -152,7 +152,7 @@ threadmain(int argc, char *argv[])
 			sysfatal("monstdbopen: %r");
 
 	/* initial level */
-	if((level = genlevel(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE, debug?0:nrand(3)+1)) == nil)
+	if((level = lgenerate(nrand(LSIZE)+LSIZE, nrand(LSIZE)+LSIZE, debug?0:nrand(3)+1)) == nil)
 		sysfatal("genlevel: %r");
 
 	/* the player */
