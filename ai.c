@@ -588,6 +588,16 @@ bngetstuff(void)
 	return bnget;
 }
 
+void
+atkend(void *v)
+{
+	Monster *m = v;
+	mapdelete(m->bb, "attack_target");
+	mapdelete(m->bb, "attack_dst");
+	mapdelete(m->bb, "attack_offset");
+	mapdelete(m->bb, "attack_data");
+}
+
 static BehaviorNode*
 bnattack(void)
 {
@@ -605,6 +615,7 @@ bnattack(void)
 	bnatk = btsequence("attack", bnplanpath, bnmove, bnhit, nil);
 	btsetguard(bnatk, bntarget);
 	btsetguard(bntarget, bnfind);
+	btsetend(bnatk, atkend);
 
 	return bnatk;
 }
