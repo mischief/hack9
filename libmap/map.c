@@ -45,48 +45,19 @@ jenkinshash(const void *k, uintptr len, u32int *h)
 
 void (*maphash)(const void*, uintptr, u32int*) = jenkinshash;
 
-/* stanford bithacks */
-static const int MultiplyDeBruijnBitPosition[32] = {
-	0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
-	8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
-};
-
-static int
-ilog2(u32int v)
-{
-	// first round down to one less than a power of 2 
-	v |= v >> 1;
-	v |= v >> 2;
-	v |= v >> 4;
-	v |= v >> 8;
-	v |= v >> 16;
-	return MultiplyDeBruijnBitPosition[(u32int)(v * 0x07C4ACDDU) >> 27];
-}
-
 typedef struct Entry Entry;
 struct Entry {
 	char *key;
+	u32int hash;
 	void *value;
+	Entry *next;
 };
+
+#define HASHSIZE 13
 
 struct Map {
-	Entry *tab;
-	u32int *htab;
-	u32int size;
-	u32int count;
-	int probecount;
+	Entry *tab[HASHSIZE];
 	void (*free)(void*);
-};
-
-const u32int primemax = 4294967295;
-
-static u32int primesz[] = {
-	5, 13, 31, 61, 89, 127, 521, 1279, 3217,
-	9689, 11213, 19937, 23209, 44497, 86243,
-	110503, 132049, 216091, 756839, 1257787,
-	2976221, 3021377, 6972593, 13945193,
-	27890389, 55780799, 111561613,
-	4294967295
 };
 
 static void
@@ -104,22 +75,6 @@ mapnew(void (*fr)(void*))
 	if(m == nil)
 		return nil;
 
-	m->size = primesz[0];
-	m->tab = mallocz(sizeof(Entry)*m->size, 1);
-	if(m->tab == nil){
-		free(m);
-		return nil;
-	}
-
-	m->htab = mallocz(sizeof(u32int)*m->size, 1);
-	if(m->htab == nil){
-		free(m->tab);
-		free(m);
-		return nil;
-	}
-
-	m->probecount = ilog2(m->size);
-
 	if(fr != nil)
 		m->free = fr;
 	else
@@ -131,277 +86,109 @@ mapnew(void (*fr)(void*))
 void
 mapfree(Map *m)
 {
-	u32int i;
-	Entry *e;
+	int i;
+	Entry *e, *next;
 
-	for(i = 0; i < m->size; i++){
-		if(m->htab[i] != 0 && !isdeleted(m->htab[i])){
-			e = &m->tab[i];
+	for(i = 0; i < HASHSIZE; i++){
+		e = m->tab[i];
+		while(e != nil){
+			next = e->next;
 			free(e->key);
-			if(m->free != nil)
-				m->free(e->value);
+			m->free(e->value);
+			free(e);
+			e = next;
 		}
 	}
-
-	free(m->tab);
-	free(m->htab);
-	free(m);
 }
 
-/*
-static void
-setentry(Entry *e, char *key, void *value)
-{
-	e->key = key;
-	e->value = value;
-}
-
-static u32int
-mapdistance(Map *m, u32int hash, u32int slot)
-{
-	return (slot + m->size - (hash % m->size)) % m->size;
-}
-*/
-
-static void
-mapswap(Map *m, u32int slot, char **key, void **value, u32int *hash)
+static Entry*
+mapgete(Map *m, char *key)
 {
 	Entry *e;
-	char *ctmp;
-	void *vtmp;
-	u32int utmp;
+	u32int hash;
 
-	e = &m->tab[slot];
+	maphash(key, strlen(key), &hash);
 
-	DBG fprint(2, "swapping %s/%s at %ud\n", e->key, *key, slot);
+	for(e = m->tab[hash % HASHSIZE]; e != nil; e = e->next)
+		if(e->hash == hash && strcmp(e->key, key) == 0)
+			return e;
 
-	ctmp = e->key;
-	e->key = *key;
-	*key = ctmp;
-
-	vtmp = e->value;
-	e->value = *value;
-	*value = vtmp;
-
-	utmp = m->htab[slot];
-	m->htab[slot] = *hash;
-	*hash = utmp;
-}
-
-static int mapgrow(Map*);
-static void edelete(Map*, Entry*);
-
-static int
-mapset1(Map *m, char *key, void *value, u32int hash)
-{
-	int used;
-	u32int slot, i, dist, edist, ehash;
-	Entry *e;
-
-loop:
-	slot = hash % m->size;
-	dist = 0;
-
-	for(i = 0; i <= m->probecount; i++){
-		used = m->htab[slot] == hash;
-		if(m->htab[slot] == 0 || used){
-found:
-			DBG fprint(2, "set slot=%ud hash=%#08ux key=%s value=%#p\n",
-				slot, hash, key, value);
-			e = &m->tab[slot];
-
-			/* not the same key! find new slot */
-			if(used && strcmp(key, e->key) != 0)
-				goto next;
-
-			/* on overwrite of same key, delete old value */
-			if(used && strcmp(key, e->key) == 0)
-				edelete(m, e);
-
-			m->htab[slot] = hash;
-
-			setentry(e, key, value);
-			return 0;			
-		}
-
-		ehash = m->htab[slot];
-		edist = mapdistance(m, ehash, slot);
-		if(edist < dist){
-			if(isdeleted(ehash))
-				goto found;
-
-			/* robin hood */
-			mapswap(m, slot, &key, &value, &hash);
-			dist = edist;
-		}
-
-next:
-		slot = (slot + 1) % m->size;
-		dist++;
-	}
-
-	/* hit probe count - grow map */
-	if(mapgrow(m) != 0)
-		return -1;
-	goto loop;
-}
-
-static u32int
-nextsize(u32int v)
-{
-	u32int i;
-
-	for(i = 0; i < nelem(primesz); i++){
-		if(primesz[i] > v){
-			i = primesz[i];
-			break;
-		}
-	}
-
-	assert(i != primemax);
-	return i;
-}
-
-static int
-mapgrow(Map *m)
-{
-	Entry *tab, *e;
-	Map tmp;
-	u32int i, newsz, ohash, *htab;
-
-	newsz = nextsize(m->size);
-
-	DBG fprint(2, "grow to %ud\n", newsz);
-
-	tab = mallocz(sizeof(Entry) * newsz, 1);
-	if(tab == nil)
-		return -1;
-
-	htab = mallocz(sizeof(u32int) * newsz, 1);
-	if(htab == nil){
-		free(tab);
-		return -1;
-	}
-
-	tmp.tab = tab;
-	tmp.htab = htab;
-	tmp.size = newsz;
-	tmp.probecount = ilog2(newsz);
-
-	for(i = 0; i < m->size; i++){
-		e = &m->tab[i];
-		ohash = m->htab[i];
-		if(ohash != 0 && !isdeleted(ohash)){
-			if(mapset1(&tmp, e->key, e->value, m->htab[i]) != 0){
-				/* whatever */
-				abort();
-			}
-		}
-	}
-
-	free(m->tab);
-	free(m->htab);
-
-	m->tab = tmp.tab;
-	m->htab = tmp.htab;
-	m->size = tmp.size;
-	m->probecount = tmp.probecount;
-
-	return 0;
+	return nil;
 }
 
 int
 mapset(Map *m, char *key, void *value)
 {
+	Entry *e;
 	u32int hash;
-	char *kd;
 
-	maphash(key, strlen(key), &hash);
+	if((e = mapgete(m, key)) == nil){
+		/* not found */
+		e = mallocz(sizeof(Entry), 1);
+		if(e == nil)
+			return -1;
 
-	kd = strdup(key);
-	if(kd == nil)
-		return -1;
-	setmalloctag(kd, getcallerpc(&m));
+		e->key = strdup(key);
+		if(e->key == nil){
+			free(e);
+			return -1;
+		}
 
-	if(mapset1(m, kd, value, hash) != 0)
-		return -1;
+		maphash(key, strlen(key), &hash);
 
-	m->count++;
+		e->hash = hash;
+		e->value = value;
+
+		e->next = m->tab[hash % HASHSIZE];
+		m->tab[hash % HASHSIZE] = e;
+	} else {
+		/* already there */
+		m->free(e->value);
+		e->value = value;
+	}
 
 	return 0;
-}
-
-static int
-mapslot(Map *m, char *key)
-{
-	u32int hash, ehash, slot, dist;
-	Entry *e;
-
-	jenkinshash(key, strlen(key), &hash);
-	slot = hash % m->size;
-	dist = 0;
-
-	for(;;){
-		ehash = m->htab[slot];
-		if(ehash == 0)
-			return -1;
-
-		if(dist > mapdistance(m, ehash, slot))
-			return -1;
-
-		e = &m->tab[slot];
-		if(ehash == hash && strcmp(e->key, key) == 0)
-			return slot;
-
-		slot = (slot + 1) % m->size;
-		dist++;
-	}
 }
 
 void*
 mapget(Map *m, char *key)
 {
-	int slot;
 	Entry *e;
+	
+	e = mapgete(m, key);
 
-	slot = mapslot(m, key);
-	if(slot < 0)
-		return nil;
+	if(e != nil)
+		return e->value;
 
-	e = &m->tab[slot];
-	return e->value;
-}
-
-static void
-edelete(Map *m, Entry *e)
-{
-	free(e->key);
-	m->free(e->value);
-	e->key = nil;
-	e->value = nil;
-}
-
-static void
-sdelete(Map *m, int slot)
-{
-	Entry *e;
-
-	m->htab[slot] |= 0x80000000;
-	e = &m->tab[slot];
-	edelete(m, e);
+	return nil;
 }
 
 void
 mapdelete(Map *m, char *key)
 {
-	int slot;
+	Entry *e, *t;
+	u32int hash;
 
-	slot = mapslot(m, key);
-	if(slot < 0)
-		return;
+	maphash(key, strlen(key), &hash);
 
-	sdelete(m, slot);
-	m->count--;
+	e = t = m->tab[hash % HASHSIZE];
+
+	while(e != nil){
+		if(e->hash == hash && strcmp(e->key, key) == 0){
+			if(e == m->tab[hash % HASHSIZE])
+				m->tab[hash % HASHSIZE] = e->next;
+			else
+				t->next = e->next;
+
+			free(e->key);
+			m->free(e->value);
+			free(e);
+			return;
+		}
+
+		t = e;
+		e = e->next;
+	}
 }
 
 void
@@ -410,9 +197,11 @@ mapdump(Map *m, int fd)
 	u32int i;
 	Entry *e;
 
-	for(i = 0; i < m->size; i++){
-		e = &m->tab[i];
-		fprint(fd, "%-04d %-10s\t%#0p\t%#010ux - D=%ud\n",
-			i, e->key, e->value, m->htab[i], e->key == nil ? 0 : mapdistance(m, m->htab[i], i));
+	for(i = 0; i < HASHSIZE; i++){
+		fprint(2, "SLOT %d\n", i);
+		for(e = m->tab[i]; e != nil; e = e->next){
+			fprint(fd, "%-10s\t%#0p\t%#010ux\n",
+				e->key, e->value, e->hash);
+		}
 	}
 }
