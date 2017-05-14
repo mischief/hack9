@@ -233,6 +233,16 @@ planpathattack(void *v)
 }
 
 static int
+planpathguard(void *v)
+{
+	Monster *m;
+
+	m = v;
+
+	return planpathkey(m, "guard_dst", "guard_offset", "guard_data");
+}
+
+static int
 walktoinner(Monster *m, char *data)
 {
 	Point np;
@@ -294,6 +304,14 @@ walktoattack(void *v)
 	Monster *m;
 	m = v;
 	return walktoinner(m, "attack_data");
+}
+
+static int
+walktoguard(void *v)
+{
+	Monster *m;
+	m = v;
+	return walktoinner(m, "guard_data");
 }
 
 enum {
@@ -588,7 +606,7 @@ bngetstuff(void)
 	return bnget;
 }
 
-void
+static void
 atkend(void *v)
 {
 	Monster *m = v;
@@ -678,6 +696,78 @@ bnequip(void)
 	return bnuse;
 }
 
+enum {
+	GUARDRADIUS	= 6 * ORTHOCOST,
+};
+
+static int
+guardcheck(void *v)
+{
+	Monster *m;
+	Point ptgt;
+	AiData *dtgt;
+
+	m = v;
+
+	/* if we have not set, we aren't guarding */
+	dtgt = mapget(m->bb, "guard_target");
+	if(dtgt == nil)
+		return TASKFAIL;
+
+	switch(dtgt->type){
+	case AIPOINT:
+		ptgt = dtgt->pt;
+		break;
+	case AIMONST:
+		ptgt = dtgt->m->pt;
+		break;
+	default:
+		abort();
+	}
+
+	if(mapget(m->bb, "guard_dst") != nil){
+		/* sometimes stop early */
+		if(nrand(3) == 0 && manhattan(m->pt, ptgt) < GUARDRADIUS)
+			return TASKFAIL;
+
+		return TASKSUCCESS;
+	}
+
+	if(manhattan(m->pt, ptgt) <= GUARDRADIUS)
+		return TASKFAIL;
+
+	if(mapset(m->bb, "guard_dst", aipt(ptgt)) < 0)
+		OOM();
+	if(mapset(m->bb, "guard_offset", aiint(1)) < 0)
+		OOM();
+
+	return TASKSUCCESS;
+}
+
+static void
+guardend(void *v)
+{
+	Monster *m = v;
+	mapdelete(m->bb, "guard_dst");
+}
+
+static BehaviorNode*
+btguard(void)
+{
+	BehaviorNode *bnshouldguard, *bnplanpath, *bnwalkto;
+
+	bnshouldguard = btleaf("guard check", guardcheck);
+	bnplanpath = btleaf("guard plan path", planpathguard);
+	bnwalkto = btleaf("guard move", walktoguard);
+
+	btsetguard(bnwalkto, bnplanpath);
+	btsetguard(bnplanpath, bnshouldguard);
+
+	btsetend(bnwalkto, guardend);
+
+	return bnwalkto;
+}
+
 void
 idle(Monster *m)
 {
@@ -698,4 +788,31 @@ idle(Monster *m)
 
 	m->bt = root;
 	m->bb = map;
+}
+
+void
+aiguard(Monster *m, Monster *target, Point p)
+{
+	Map *map;
+	BehaviorNode *root;
+	AiData *tgt;
+
+	map = mapnew(aivfree);
+	if(map == nil)
+		OOM();
+
+	m->bb = map;
+
+	root = btdynguard("root", btguard(), bnattack(), bnequip(), bngetstuff(), bnidle(), nil);
+
+	m->bt = root;
+
+	if(target != nil){
+		incref(&target->ref);
+		tgt = aimonst(target);
+	} else
+		tgt = aipt(p);
+
+	if(mapset(m->bb, "guard_target", tgt) < 0)
+		OOM();
 }
