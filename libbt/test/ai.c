@@ -107,17 +107,17 @@ mkbt(void)
 	BehaviorNode *attack, *idle;
 	BehaviorNode *root;
 
-	find = btleaf("find enemy", nil, afind, nil);
-	move = btleaf("move to target", nil, amove, nil);
+	find = btleaf("find enemy", afind);
+	move = btleaf("move to target", amove);
 
 	/* die yankee pig dog */
-	hit = btleaf("hit enemy", nil, ahit, nil);
+	hit = btleaf("hit enemy", ahit);
 
 	/* combat ai is a simple search and destroy */
 	attack = btsequence("attack enemy", find, move, hit, nil);
 
-	wfind = btleaf("wander find", nil, wpfind, nil);
-	wmove = btleaf("wander move", nil, amove, nil);
+	wfind = btleaf("wander find", wpfind);
+	wmove = btleaf("wander move", amove);
 	wander = btsequence("wander", wfind, wmove, nil);
 
 	/* find is added here so control will pop out of
@@ -141,7 +141,7 @@ test_bt(void)
 	a.target = Pt(-1, -1);
 
 	root = mkbt();
-	btfree(root, &a);
+	//btfree(root, &a);
 
 	for(i = 0; i < 100; i++){
 		print("======== TICK ========\n");
@@ -179,6 +179,5 @@ main(int argc, char *argv[])
 
 	test_bt();
 
-	abort();
 	exits(nil);
 }

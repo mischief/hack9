@@ -81,11 +81,11 @@ mkbt(void)
 	BehaviorNode *find, *moveto, *pickup, *gout, *eat;
 	BehaviorNode *bnear, *get, *root;
 
-	find = btleaf("find food", nil, findfoodnearby, nil);
-	moveto = btleaf("move to food", nil, movetofood, nil);
-	pickup = btleaf("pickup food", nil, pickupfood, nil);
-	gout = btleaf("go out", nil, goout, nil);
-	eat = btleaf("eat food", nil, eatfood, nil);
+	find = btleaf("find food", findfoodnearby);
+	moveto = btleaf("move to food", movetofood);
+	pickup = btleaf("pickup food", pickupfood);
+	gout = btleaf("go out", goout);
+	eat = btleaf("eat food", eatfood);
 
 	bnear = btsequence("nearby food", find, moveto, pickup, nil);
 	get = btpriority("get food", bnear, gout, nil);

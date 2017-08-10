@@ -13,7 +13,7 @@ cancelleaf(BehaviorNode *node, void *agent)
 
 	leaf = (BehaviorLeaf*)node;
 
-	leaf->status = TASKFRESH;
+	leaf->node.status = TASKFRESH;
 }
 
 static void
@@ -35,7 +35,7 @@ cancelbranch(BehaviorNode *node, void *agent)
 	else
 		branch->childcurrent = 0;
 
-	branch->status = TASKFRESH;
+	branch->node.status = TASKFRESH;
 }
 
 static void (*cancelfns[])(BehaviorNode*, void*) = {

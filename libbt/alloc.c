@@ -4,24 +4,32 @@
 #include "bt.h"
 #include "impl.h"
 
+static void
+btinitnode(BehaviorNode *node, short type, char *name)
+{
+	assert(type >= 0 || type < BT_MAXTYPE);
+	memset(node, 0, sizeof(BehaviorNode));
+	node->type = type;
+	snprint(node->name, sizeof(node->name), "%s", name);
+}
+
 BehaviorNode*
 btleaf(char *name, BehaviorAction action)
 {
-	BehaviorLeaf *node;
+	BehaviorLeaf *leaf;
 
 	assert(action != nil);
 
-	node = mallocz(sizeof(BehaviorLeaf), 1);
-	if(node == nil)
+	leaf = mallocz(sizeof(BehaviorLeaf), 1);
+	if(leaf == nil)
 		return nil;
 
-	setmalloctag(node, getcallerpc(&name));
+	setmalloctag(leaf, getcallerpc(&name));
 
-	snprint(node->name, sizeof(node->name), "%s", name);
-	node->type = BT_LEAF;
-	node->ref = 0;
-	node->action = action;
-	return node;
+	btinitnode(&leaf->node, BT_LEAF, name);
+
+	leaf->action = action;
+	return (BehaviorNode*)leaf;
 }
 
 static int
@@ -41,13 +49,9 @@ btaddchild(BehaviorBranch *node, BehaviorNode *child)
 }
 
 static int
-btbranch(BehaviorBranch *node, int type, va_list ap)
+btbranch(BehaviorBranch *node, va_list ap)
 {
 	BehaviorNode *child;
-
-	assert(type >= 0 || type < BT_MAXTYPE);
-
-	node->type = type;
 
 	while((child = va_arg(ap, BehaviorNode*)) != nil){
 		if(btaddchild(node, child) < 0)
@@ -65,127 +69,126 @@ BehaviorNode*
 btsequence(char *name, ...)
 {
 	va_list ap;
-	BehaviorBranch *node;
+	BehaviorBranch *branch;
 
-	node = mallocz(sizeof(BehaviorBranch), 1);
-	if(node == nil)
+	branch = mallocz(sizeof(BehaviorBranch), 1);
+	if(branch == nil)
 		return nil;
 
-	setmalloctag(node, getcallerpc(&name));
+	setmalloctag(branch, getcallerpc(&name));
 
-	snprint(node->name, sizeof(node->name), "%s", name);
+	btinitnode(&branch->node, BT_SEQUENCE, name);
 
 	va_start(ap, name);
 
-	if(btbranch(node, BT_SEQUENCE, ap) < 0){
-		free(node);
-		node = nil;
+	if(btbranch(branch, ap) < 0){
+		free(branch);
+		branch = nil;
 	}
 
 	va_end(ap);
-	return node;
+	return (BehaviorNode*)branch;
 }
 
 BehaviorNode*
 btpriority(char *name, ...)
 {
 	va_list ap;
-	BehaviorBranch *node;
+	BehaviorBranch *priority;
 
-	node = mallocz(sizeof(BehaviorBranch), 1);
-	if(node == nil)
+	priority = mallocz(sizeof(BehaviorBranch), 1);
+	if(priority == nil)
 		return nil;
 
-	setmalloctag(node, getcallerpc(&name));
+	setmalloctag(priority, getcallerpc(&name));
 
-	snprint(node->name, sizeof(node->name), "%s", name);
+	btinitnode(&priority->node, BT_PRIORITY, name);
 
 	va_start(ap, name);
 
-	if(btbranch(node, BT_PRIORITY, ap) < 0){
-		free(node);
-		node = nil;
+	if(btbranch(priority, ap) < 0){
+		free(priority);
+		priority = nil;
 	}
 
 	va_end(ap);
-	return node;
+	return (BehaviorNode*)priority;
 }
 
 BehaviorNode*
 btparallel(char *name, int S, int F, ...)
 {
 	va_list ap;
-	BehaviorParallel *node;
+	BehaviorParallel *parallel;
 
-	node = mallocz(sizeof(BehaviorParallel), 1);
-	if(node == nil)
+	parallel = mallocz(sizeof(BehaviorParallel), 1);
+	if(parallel == nil)
 		return nil;
 
-	setmalloctag(node, getcallerpc(&name));
+	setmalloctag(parallel, getcallerpc(&name));
 
-	snprint(node->name, sizeof(node->name), "%s", name);
+	btinitnode(&parallel->branch.node, BT_PARALLEL, name);
 
-	node->S = S;
-	node->F = F;
+	parallel->S = S;
+	parallel->F = F;
 
 	va_start(ap, F);
 
-	if(btbranch(node, BT_PARALLEL, ap) < 0){
-		free(node);
-		node = nil;
+	if(btbranch(&parallel->branch, ap) < 0){
+		free(parallel);
+		parallel = nil;
 	}
 
 	va_end(ap);
-	return node;
+	return (BehaviorNode*)parallel;
 }
 
 BehaviorNode*
 btdynguard(char *name, ...)
 {
 	va_list ap;
-	BehaviorBranch *node;
+	BehaviorBranch *dynguard;
 
-	node = mallocz(sizeof(BehaviorBranch), 1);
-	if(node == nil)
+	dynguard = mallocz(sizeof(BehaviorBranch), 1);
+	if(dynguard == nil)
 		return nil;
 
-	setmalloctag(node, getcallerpc(&name));
+	setmalloctag(dynguard, getcallerpc(&name));
 
-	snprint(node->name, sizeof(node->name), "%s", name);
-	node->childcurrent = -1;
+	btinitnode(&dynguard->node, BT_DYNGUARD, name);
+
+	dynguard->childcurrent = -1;
 
 	va_start(ap, name);
 
-	if(btbranch(node, BT_DYNGUARD, ap) < 0){
-		free(node);
-		node = nil;
+	if(btbranch(dynguard, ap) < 0){
+		free(dynguard);
+		dynguard = nil;
 	}
 
 	va_end(ap);
-	return node;	
+	return (BehaviorNode*)dynguard;	
 }
 
 BehaviorNode*
 btinvert(char *name, BehaviorNode *child)
 {
-	BehaviorBranch *node;
+	BehaviorBranch *invert;
 
-	node = mallocz(sizeof(BehaviorBranch), 1);
-	if(node == nil)
+	invert = mallocz(sizeof(BehaviorBranch), 1);
+	if(invert == nil)
 		return nil;
 
-	setmalloctag(node, getcallerpc(&name));
+	setmalloctag(invert, getcallerpc(&name));
 
-	snprint(node->name, sizeof(node->name), "%s", name);
+	btinitnode(&invert->node, BT_INVERT, name);
 
-	node->type = BT_INVERT;
-
-	if(btaddchild(node, child) < 0){
-		free(node);
-		node = nil;
+	if(btaddchild(invert, child) < 0){
+		free(invert);
+		invert = nil;
 	}
 
-	return node;
+	return (BehaviorNode*)invert;
 }
 
 void

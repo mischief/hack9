@@ -19,13 +19,13 @@ struct BehaviorNode {
 
 typedef struct BehaviorLeaf BehaviorLeaf;
 struct BehaviorLeaf {
-	BehaviorNode;
+	BehaviorNode node;
 	BehaviorAction action;
 };
 
 typedef struct BehaviorBranch BehaviorBranch;
 struct BehaviorBranch {
-	BehaviorNode;
+	BehaviorNode node;
 
 	int childcurrent;
 	int childcount;
@@ -34,7 +34,7 @@ struct BehaviorBranch {
 
 typedef struct BehaviorParallel BehaviorParallel;
 struct BehaviorParallel {
-	BehaviorBranch;
+	BehaviorBranch branch;
 
 	int S;
 	int F;

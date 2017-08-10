@@ -36,9 +36,9 @@ tickleaf(BehaviorNode *node, void *agent)
 
 	leaf = (BehaviorLeaf*)node;
 
-	leaf->status = leaf->action(agent);
+	leaf->node.status = leaf->action(agent);
 
-	return leaf->status;
+	return leaf->node.status;
 }
 
 static int
@@ -116,8 +116,8 @@ tickparallel(BehaviorNode *node, void *agent)
 
 	parallel = (BehaviorParallel*)node;
 
-	for(i = 0; i < parallel->childcount; i++){
-		child = parallel->children[i];
+	for(i = 0; i < parallel->branch.childcount; i++){
+		child = parallel->branch.children[i];
 
 		state = TASKFAIL;
 		if(btcheckguard(child, agent) >= 0)
@@ -137,12 +137,12 @@ tickparallel(BehaviorNode *node, void *agent)
 		}
 
 		if(success >= parallel->S){
-			btcancel(parallel, agent);
+			btcancel((BehaviorNode*)parallel, agent);
 			return TASKSUCCESS;
 		}
 
 		if(failure >= parallel->F){
-			btcancel(parallel, agent);
+			btcancel((BehaviorNode*)parallel, agent);
 			return TASKFAIL;
 		}
 	}
@@ -174,7 +174,7 @@ tickdynguard(BehaviorNode *node, void *agent)
 	}
 
 	if(torun == nil){
-		btcancel(branch, agent);
+		btcancel((BehaviorNode*)branch, agent);
 		return TASKFAIL;
 	}
 
@@ -187,7 +187,7 @@ tickdynguard(BehaviorNode *node, void *agent)
 	case TASKSUCCESS:
 	case TASKFAIL:
 		branch->childcurrent = -1;
-		btcancel(branch, agent);
+		btcancel((BehaviorNode*)branch, agent);
 	}
 
 	return node->status;
