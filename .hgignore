@@ -1,0 +1,11 @@
+syntax: glob
+
+# object files
+*.[o68]
+
+# library files
+*.[o68].a
+
+# binaries
+[o68].*
+
