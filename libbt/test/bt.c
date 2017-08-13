@@ -109,7 +109,7 @@ test_bt(void)
 	while(a.hunger > 0){
 		bttick(root, &a);
 		print("hunger=%d food=%d\n", a.hunger, a.food);
-		sleep(200);
+		sleep(10);
 	}
 }
 
@@ -127,6 +127,8 @@ main(int argc, char *argv[])
 	default:
 		usage();
 	}ARGEND
+
+	alarm(5000);
 
 	srand(truerand());
 

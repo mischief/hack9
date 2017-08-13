@@ -1,0 +1,11 @@
+<$PLAN9/src/mkhdr
+
+# plan9port is too dumb to clear OFILES for us
+OFILES=
+TARG=`ls *.c | sed 's/\.c//g'`
+
+CFLAGS=$CFLAGS -I..
+LIB=../libbt.$O.a
+
+<$PLAN9/src/mkmany
+

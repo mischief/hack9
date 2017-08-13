@@ -7,3 +7,12 @@
 clean nuke:V:
 	rm -f *.[$OS] [$OS].out $LIB
 
+test:QV:
+	cd test
+	mk -f mk.p9p clean
+	mk -f mk.p9p all
+	for t in $O.*; do
+		echo $t...
+		./$t
+	done
+

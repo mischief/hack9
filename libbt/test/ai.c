@@ -19,7 +19,7 @@ rstate(void)
 int
 pstate(int state)
 {
-	print("\t%s\n", btstatenames[state]);
+	print(" -> %s\n", btstatenames[state]);
 	return state;
 }
 
@@ -54,13 +54,9 @@ afind(void *a)
 int
 amove(void *a)
 {
-	Point p, t;
 	Agent *agent = a;
 
 	print("move");
-
-	p = agent->pos;
-	t = agent->target;
 
 	if((abs(agent->pos.x - agent->target.x) + abs(agent->pos.y - agent->target.y)) < 2)
 		return pstate(TASKSUCCESS);
@@ -90,7 +86,7 @@ amove(void *a)
 
 /* simulate hitting an enemy */
 int
-ahit(void*)
+ahit(void *a)
 {
 	print("hit");
 
@@ -169,11 +165,10 @@ main(int argc, char *argv[])
 		usage();
 	}ARGEND
 
-	#include <pool.h>
-	mainmem->flags = POOL_ANTAGONISM|POOL_PARANOIA;
-
 	fmtinstall('P', Pfmt);
 	fmtinstall('T', btfmt);
+
+	alarm(5000);
 
 	srand(truerand());
 

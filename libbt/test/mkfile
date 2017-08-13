@@ -6,3 +6,4 @@ CFLAGS=-N $CFLAGS -I..
 LIB=../libbt.$O.a
 
 </sys/src/cmd/mkmany
+
