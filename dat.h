@@ -46,7 +46,8 @@ struct WalkToData {
 };
 
 /* ai.c */
-void idle(Monster *m);
+void aiinit(void);
+void aiidle(Monster *m);
 
 enum
 {
@@ -246,7 +247,8 @@ struct Monster
 	u32int flags;
 
 	/* ai state */
-	BehaviorNode *bt;
+	Behavior *bt;
+	BehaviorState *bs;
 	Map *bb;
 
 	/* inventory */
@@ -271,6 +273,7 @@ int munwield(Monster *m, int type);
 int muse(Monster *m, Item *i);
 void maddinv(Monster *m, Item *i);
 void mgenequip(Monster *m);
+Monster *mcreate(Level *l, Point p, char *type);
 int xpcalc(int level);
 
 /* well known tiles, indexes into tileset */
@@ -371,7 +374,8 @@ struct Level
 	Point up;
 	Point down;
 
-	BehaviorNode *bt;
+	Behavior *bt;
+	BehaviorState *bs;
 
 	int		nspawns;
 	Spawn	spawns[10];
@@ -381,7 +385,10 @@ struct Level
 };
 
 /* level.c */
+void linit(void);
+Level *lnew(int width, int height, int floor, char *name);
 void lfree(Level *l);
+void lmkmons(Level *l, Point *p, int count, char *type, int r);
 Tile *tileat(Level *l, Point p);
 #define flagat(l, p) (*(l->flags+(p.y*l->width)+p.x))
 #define hasflagat(l, p, F) (*(l->flags+(p.y*l->width)+p.x) & (F))

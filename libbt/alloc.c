@@ -157,7 +157,8 @@ btdynguard(char *name, ...)
 
 	btinitnode(&dynguard->node, BT_DYNGUARD, name);
 
-	dynguard->childcurrent = -1;
+	// XXX: might not work without this
+	// dynguard->childcurrent = -1;
 
 	va_start(ap, name);
 
@@ -206,7 +207,7 @@ btsetend(BehaviorNode *node, void (*end)(void*))
 }
 
 static void
-btfreetree(BehaviorNode *node, void *agent)
+btfreetree(BehaviorNode *node)
 {
 	int i;
 	BehaviorBranch *branch;
@@ -215,7 +216,7 @@ btfreetree(BehaviorNode *node, void *agent)
 		return;
 
 	if(node->guard != nil){
-		btfreetree(node->guard, agent);
+		btfreetree(node->guard);
 		node->guard = nil;
 	}
 
@@ -223,7 +224,7 @@ btfreetree(BehaviorNode *node, void *agent)
 		branch = (BehaviorBranch*)node;
 		if(branch->children != nil){
 			for(i = 0; i < branch->childcount; i++){
-				btfreetree(branch->children[i], agent);
+				btfreetree(branch->children[i]);
 				branch->children[i] = nil;
 			}
 			branch->childcount = 0;
@@ -236,8 +237,7 @@ btfreetree(BehaviorNode *node, void *agent)
 }
 
 void
-btfree(BehaviorNode *node, void *agent)
+btfree(Behavior *b)
 {
-	btcancel(node, agent);
-	btfreetree(node, agent);
+	btfreetree(b->root);
 }

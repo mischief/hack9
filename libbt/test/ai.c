@@ -132,22 +132,26 @@ test_bt(void)
 	int i, state;
 	Agent a;
 	BehaviorNode *root;
+	Behavior *b;
+	BehaviorState *bs;
 
 	a.pos = Pt(0, 0);
 	a.target = Pt(-1, -1);
 
 	root = mkbt();
-	//btfree(root, &a);
+	b = btroot(root);
+	bs = btstatenew(b);
 
 	for(i = 0; i < 100; i++){
 		print("======== TICK ========\n");
 		print("pos=%P target=%P %T\n", a.pos, a.target, root);
-		state = bttick(root, &a);
+		state = bttick(b, bs, &a);
 		print(" -> %s\n", btstatenames[state]);
 		sleep(10);
 	}
 
-	btfree(root, &a);
+	btstatefree(bs, &a);
+	btfree(b);
 }
 
 void

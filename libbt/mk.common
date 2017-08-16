@@ -1,6 +1,6 @@
 P=bt
 
 LIB=lib$P.$O.a
-OFILES=alloc.$O $P.$O cancel.$O fmt.$O tick.$O
+OFILES=alloc.$O $P.$O cancel.$O fmt.$O tick.$O state.$O
 HFILES=$P.h
 

@@ -214,7 +214,7 @@ mfree(Monster *m)
 	if(decref(&m->ref) != 0)
 		return;
 
-	btfree(m->bt, m);
+	btstatefree(m->bs, m);
 	mapfree(m->bb);
 
 	for(n = 0; n < NEQUIP; n++){
@@ -235,7 +235,8 @@ mupdate(Monster *m)
 	m->mvp += m->mvr;
 
 	while(m->mvp >= 12){
-		bttick(m->bt, m);
+		fprint(2, "tick %s\n", m->md->name);
+		bttick(m->bt, m->bs, m);
 
 		m->mvp -= 12;
 		m->turns++;
@@ -592,6 +593,27 @@ mgenequip(Monster *m)
 		}
 	}
 }
+
+/* create a monster in a level, equip it and make it smart */
+Monster*
+mcreate(Level *l, Point p, char *type)
+{
+	Monster *m;
+	m = mbyname(type);
+	if(m == nil)
+		sysfatal("monstbyname: %r");
+	m->l = l;
+	m->pt = p;
+
+	/* equip it */
+	mgenequip(m);
+
+	/* smarts */
+	aiidle(m);
+
+	return m;
+}
+
 
 /* return the amount of xp required to gain a level */
 int

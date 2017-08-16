@@ -10,8 +10,19 @@ extern char *btstatenames[TASKMAX];
 
 typedef int (*BehaviorAction)(void*);
 
+typedef struct Behavior Behavior;
+#pragma incomplete Behavior
+
+typedef struct BehaviorState BehaviorState;
+#pragma incomplete Behavior
+
 typedef struct BehaviorNode BehaviorNode;
 #pragma incomplete BehaviorNode
+
+Behavior *btnew();
+Behavior *btroot(BehaviorNode *root);
+BehaviorState *btstatenew(Behavior*);
+void btstatefree(BehaviorState*, void *agent);
 
 /* leaf action */
 BehaviorNode *btleaf(char*, BehaviorAction);
@@ -31,9 +42,9 @@ void btsetguard(BehaviorNode*, BehaviorNode*);
 /* set end function for a node */
 void btsetend(BehaviorNode*, void (*)(void*));
 
-void btcancel(BehaviorNode*, void*);
-void btfree(BehaviorNode*, void*);
-int bttick(BehaviorNode*, void*);
+void btfree(Behavior*);
+int bttick(Behavior*, BehaviorState*, void*);
 
 /* %T */
 int btfmt(Fmt *f);
+

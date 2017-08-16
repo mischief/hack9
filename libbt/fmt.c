@@ -16,13 +16,18 @@ btfmt(Fmt *f)
 {
 	int n;
 	Rune c;
-	char *s;
+	char *s, id;
 	BehaviorNode *node;
 	BehaviorBranch *branch;
 	node = va_arg(f->args, BehaviorNode*);
 
-	for(n = 0;node != nil; n++){
+	fmtprint(f, "%s", node->name);
+	return 0;
+
+	/*
+	for(n = 0; node != nil; n++){
 		c = L'×';
+		id = node->id;
 		s = node->name;
 		switch(node->type){
 		case BT_LEAF:
@@ -61,11 +66,12 @@ btfmt(Fmt *f)
 			node = branch->children[branch->childcurrent];
 			break;
 		default:
-			abort();
+			sysfatal("weird node type %d '%s'\n", node->type, node->name);
 		}
 
-		fmtprint(f, "%s(%C%s)", (n!=0)?" ":"", c, s);
+		fmtprint(f, "%s(%C%s %hhud)", (n!=0)?" ":"", c, s, id);
 	}
 
 	return 0;
+	*/
 }

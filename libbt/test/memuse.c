@@ -44,9 +44,10 @@ memuse(void)
 static int
 nop(void *a)
 {
+	return TASKSUCCESS;
 }
 
-BehaviorNode*
+Behavior*
 mkbt(void)
 {
 	BehaviorNode *one, *two, *three;
@@ -58,23 +59,28 @@ mkbt(void)
 
 	root = btsequence("root", one, two, three, nil);
 
-	return root;
+	return btroot(root);
 }
 
 void
 main(int argc, char *argv[])
 {
 	int n;
+	Behavior *root;
 
 	ARGBEGIN{
 	default:
 		sysfatal("no argumnts");
 	}ARGEND
 
+	print("%lud\n", memuse());
+
+	root = mkbt();
+
 	n = 100000;
 
 	while(n-- > 0)
-		mkbt();
+		btstatenew(root);
 
 	print("%lud\n", memuse());
 

@@ -768,34 +768,78 @@ btguard(void)
 	return bnwalkto;
 }
 
-void
-idle(Monster *m)
+
+typedef struct AIBehavior AIBehavior;
+struct AIBehavior {
+	char name[SZNAME];
+	Behavior *behavior;
+};
+
+static AIBehavior behaviors[16];
+static int nbehaviors = 0;
+
+static void
+addbehavior(char *name, Behavior *behavior)
 {
-	Map *map;
-	BehaviorNode *root;
+	assert(name != nil);
+	assert(behavior != nil);
 
-	map = mapnew(aivfree);
-	if(map == nil)
-		OOM();
+	assert(nbehaviors < nelem(behaviors)-1);
 
-	if(nrand(10) > 3)
-		root = btdynguard("root", bnattack(), bnequip(), bngetstuff(), bnidle(), nil);
-	else
-		root = btdynguard("root", bnequip(), bngetstuff(), bnattack(), bnidle(), nil);
+	snprint(behaviors[nbehaviors].name, SZNAME, "%s", name);
+	behaviors[nbehaviors].behavior = behavior;
 
-	if(root == nil)
-		OOM();
+	nbehaviors++;
+}
 
-	m->bt = root;
-	m->bb = map;
+Behavior*
+getbehavior(char *name)
+{
+	int i;
+	AIBehavior *b;
+
+	for(i = 0; i < nbehaviors; i++){
+		b = &behaviors[i];
+
+		if(strcmp(name, b->name) == 0)
+			return b->behavior;
+	}
+
+	sysfatal("no behavior called %q", name);
+	return nil;
 }
 
 void
-aiguard(Monster *m, Monster *target, Point p)
+aiinit(void)
+{
+	Behavior *b;
+	BehaviorNode *root;
+
+	root = btdynguard("atk1_root", btguard(), bnattack(), bnequip(), bngetstuff(), bnidle(), nil);
+	if(root == nil)
+		OOM();
+
+	b = btroot(root);
+	if(b == nil)
+		OOM();
+
+	addbehavior("atk1", b);
+
+	root = btdynguard("root", btguard(), bnequip(), bngetstuff(), bnattack(), bnidle(), nil);
+	if(root == nil)
+		OOM();
+
+	b = btroot(root);
+	if(b == nil)
+		OOM();
+
+	addbehavior("atk2", b);
+}
+
+void
+aiidle(Monster *m)
 {
 	Map *map;
-	BehaviorNode *root;
-	AiData *tgt;
 
 	map = mapnew(aivfree);
 	if(map == nil)
@@ -803,9 +847,21 @@ aiguard(Monster *m, Monster *target, Point p)
 
 	m->bb = map;
 
-	root = btdynguard("root", btguard(), bnattack(), bnequip(), bngetstuff(), bnidle(), nil);
+	if(nrand(10) > 3)
+		m->bt = getbehavior("atk1");
+	else
+		m->bt = getbehavior("atk2");
 
-	m->bt = root;
+	m->bs = btstatenew(m->bt);
+	if(m->bs == nil)
+		OOM();
+}
+
+/* set guard target; activates btguard */
+void
+aisetguard(Monster *m, Monster *target, Point p)
+{
+	AiData *tgt;
 
 	if(target != nil){
 		incref(&target->ref);
@@ -816,3 +872,4 @@ aiguard(Monster *m, Monster *target, Point p)
 	if(mapset(m->bb, "guard_target", tgt) < 0)
 		OOM();
 }
+

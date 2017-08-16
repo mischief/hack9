@@ -100,17 +100,24 @@ test_bt(void)
 	int i;
 	Agent a;
 	BehaviorNode *root;
+	Behavior *b;
+	BehaviorState *bs;
 
 	a.hunger = 10;
 	a.food = 0;
 
 	root = mkbt();
+	b = btroot(root);
+	bs = btstatenew(b);
 
 	while(a.hunger > 0){
-		bttick(root, &a);
+		bttick(b, bs, &a);
 		print("hunger=%d food=%d\n", a.hunger, a.food);
 		sleep(10);
 	}
+
+	btstatefree(bs, &a);
+	btfree(b);
 }
 
 void

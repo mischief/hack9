@@ -70,7 +70,7 @@ movemons(void)
 	l = player->l;
 
 	/* run ai on level, for spawns etc */
-	bttick(l->bt, l);
+	bttick(l->bt, l->bs, l);
 
 	for(p.x = 0; p.x < l->width; p.x++){
 		for(p.y = 0; p.y < l->height; p.y++){
@@ -109,7 +109,7 @@ usage(void)
 void
 threadmain(int argc, char *argv[])
 {
-	long seed;
+	unsigned long seed;
 	Tile *t;
 	Level *level;
 
@@ -134,7 +134,7 @@ threadmain(int argc, char *argv[])
 	srand(seed);
 
 	if(debug)
-		fprint(2, "seed %ld\n", seed);
+		fprint(2, "seed %lud\n", seed);
 
 	quotefmtinstall();
 
@@ -142,6 +142,8 @@ threadmain(int argc, char *argv[])
 	home = getenv("home");
 
 	uiinit(argv0);
+	aiinit();
+	linit();
 
 	if(!itemdbopen("/lib/hack9/item.ndb"))
 		if(!itemdbopen("item.ndb"))
@@ -173,13 +175,14 @@ threadmain(int argc, char *argv[])
 	t->monst = player;
 	setflagat(level, player->pt, Fhasmonster);
 
-	player->bt = btleaf("input", uibt);
+	player->bt = btroot(btleaf("input", uibt));
+	player->bs = btstatenew(player->bt);
 
 	if(debug > 0){
 		player->hp = 500;
 		player->maxhp = 500;
 	}
-
+	
 	uiredraw(0);
 
 	for(;;){
